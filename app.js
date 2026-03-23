@@ -1,5 +1,6 @@
 const state = {
   activeLang: "fr",
+  viewMode: "full",
   affiliates: [],
   baseAffiliates: [],
   localAffiliates: []
@@ -15,6 +16,7 @@ const refs = {
   resultsInfo: document.getElementById("resultsInfo"),
   emptyState: document.getElementById("emptyState"),
   langButtons: Array.from(document.querySelectorAll(".lang-btn")),
+  viewButtons: Array.from(document.querySelectorAll(".view-btn")),
   copyAllTemplate: document.getElementById("copyAllTemplate"),
   affiliateForm: document.getElementById("affiliateForm"),
   formFeedback: document.getElementById("formFeedback"),
@@ -28,6 +30,7 @@ const refs = {
 };
 
 const LOCAL_STORAGE_KEY = "affiliateHubLocalAffiliates";
+const VIEW_MODE_STORAGE_KEY = "affiliateHubViewMode";
 
 const PLATFORM_LABELS = {
   instagram: "Instagram",
@@ -299,6 +302,10 @@ function saveLocalAffiliates() {
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state.localAffiliates));
 }
 
+function saveViewMode() {
+  localStorage.setItem(VIEW_MODE_STORAGE_KEY, state.viewMode);
+}
+
 function loadLocalAffiliates() {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -325,6 +332,11 @@ function loadLocalAffiliates() {
   } catch (error) {
     state.localAffiliates = [];
   }
+}
+
+function loadViewMode() {
+  const stored = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+  state.viewMode = stored === "compact" ? "compact" : "full";
 }
 
 async function loadAffiliates() {
@@ -496,6 +508,14 @@ function applyLanguage() {
   });
 }
 
+function applyViewMode() {
+  refs.viewButtons.forEach((btn) => {
+    btn.classList.toggle("is-active", btn.dataset.view === state.viewMode);
+  });
+
+  refs.cardsGrid.classList.toggle("is-compact", state.viewMode === "compact");
+}
+
 function cardMatches(card, searchTerm, platform, niche, format, tone) {
   if (platform !== "all" && card.dataset.platform !== platform) return false;
   if (niche !== "all" && card.dataset.niche !== niche) return false;
@@ -555,6 +575,16 @@ function bindLanguageToggle() {
     btn.addEventListener("click", () => {
       state.activeLang = btn.dataset.lang;
       applyLanguage();
+    });
+  });
+}
+
+function bindViewToggle() {
+  refs.viewButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.viewMode = btn.dataset.view;
+      saveViewMode();
+      applyViewMode();
     });
   });
 }
@@ -715,12 +745,15 @@ async function init() {
   try {
     await loadAffiliates();
     loadLocalAffiliates();
+    loadViewMode();
     mergeAffiliates();
     renderCards();
     applyLanguage();
+    applyViewMode();
     applyFilters();
     bindFilters();
     bindLanguageToggle();
+    bindViewToggle();
     bindCardActions();
     bindComposerActions();
   } catch (error) {

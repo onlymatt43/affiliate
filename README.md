@@ -58,6 +58,12 @@ Le contenu des cartes est maintenant pilote par JSON:
 - Profil social conserve en option seulement (`socialUrl`)
 - Nouveaux boutons de copie: URL promo, code promo, kit affiliation
 
+## Fonctions V4.1
+
+- Toggle d'affichage `Full` / `Compact` pour accelerer l'usage quotidien
+- Mode `Compact`: cache les sections longues FR/EN et affiche un workflow court (promo + code + kit)
+- Le choix de vue est sauvegarde localement dans le navigateur
+
 Note importante:
 
 - Le fichier `data/affiliates.json` reste la source du repo Git

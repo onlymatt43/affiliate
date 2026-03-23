@@ -144,9 +144,24 @@ a:focus-visible {
   background: #fffdf9;
 }
 
+.view-toggle {
+  border: 1px solid #ccb89b;
+  border-radius: 12px;
+  margin: 0;
+  padding: 0.45rem;
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  background: #fffdf9;
+}
+
 .lang-toggle,
 .control-group {
   min-width: 0;
+}
+
+.view-toggle legend {
+  padding: 0 0.35rem;
 }
 
 .lang-toggle legend {
@@ -165,6 +180,21 @@ a:focus-visible {
 .lang-btn.is-active {
   background: #1d7d6f;
   border-color: #1d7d6f;
+  color: #fff;
+}
+
+.view-btn {
+  border: 1px solid #ccb89b;
+  background: #fff8ec;
+  border-radius: 10px;
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.view-btn.is-active {
+  background: #1f2329;
+  border-color: #1f2329;
   color: #fff;
 }
 
@@ -432,6 +462,21 @@ h3 {
   border-color: #89baad;
 }
 
+.cards-grid.is-compact .affiliate-card {
+  gap: 0.6rem;
+  padding: 0.8rem;
+}
+
+.cards-grid.is-compact .lang-panel {
+  display: none;
+}
+
+.cards-grid.is-compact .card-actions button[data-action="copy-tags"],
+.cards-grid.is-compact .card-actions button[data-action="copy-specs"],
+.cards-grid.is-compact .card-actions button[data-action="duplicate"] {
+  display: none;
+}
+
 .copy-feedback {
   min-height: 1.2rem;
   color: #176356;
@@ -480,7 +525,7 @@ h3 {
   }
 
   .controls {
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto;
     align-items: end;
   }
 
