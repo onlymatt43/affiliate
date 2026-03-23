@@ -19,7 +19,10 @@ const refs = {
   affiliateForm: document.getElementById("affiliateForm"),
   formFeedback: document.getElementById("formFeedback"),
   exportLocalBtn: document.getElementById("exportLocalBtn"),
-  clearLocalBtn: document.getElementById("clearLocalBtn")
+  clearLocalBtn: document.getElementById("clearLocalBtn"),
+  jsonImportInput: document.getElementById("jsonImportInput"),
+  importMergeBtn: document.getElementById("importMergeBtn"),
+  importReplaceBtn: document.getElementById("importReplaceBtn")
 };
 
 const LOCAL_STORAGE_KEY = "affiliateHubLocalAffiliates";
@@ -217,6 +220,87 @@ function buildAffiliateFromForm(formData) {
   };
 }
 
+function normalizeAffiliateShape(raw, index) {
+  if (!raw || typeof raw !== "object") {
+    throw new Error(`Element ${index + 1}: format invalide`);
+  }
+
+  const name = String(raw.name || "").trim();
+  const platform = String(raw.platform || "").trim();
+  const niche = String(raw.niche || "").trim();
+  const format = String(raw.format || "").trim();
+  const tone = String(raw.tone || "").trim();
+  const contactUrl = String(raw.contactUrl || "").trim();
+  const fr = raw.fr || {};
+  const en = raw.en || {};
+
+  if (!name || !platform || !niche || !format || !tone || !contactUrl) {
+    throw new Error(`Element ${index + 1}: champs principaux manquants`);
+  }
+
+  try {
+    const parsed = new URL(contactUrl);
+    if (!parsed.protocol.startsWith("http")) {
+      throw new Error("URL invalide");
+    }
+  } catch (error) {
+    throw new Error(`Element ${index + 1}: contactUrl invalide`);
+  }
+
+  const frTags = String(fr.tags || "").trim();
+  const frSpecs = String(fr.specs || "").trim();
+  const frCaption = String(fr.caption || "").trim();
+  const enTags = String(en.tags || "").trim();
+  const enSpecs = String(en.specs || "").trim();
+  const enCaption = String(en.caption || "").trim();
+
+  if (!frTags || !frSpecs || !frCaption || !enTags || !enSpecs || !enCaption) {
+    throw new Error(`Element ${index + 1}: champs FR/EN manquants`);
+  }
+
+  return {
+    id: raw.id ? String(raw.id).trim() : `${slugify(name) || "affiliate"}-${Date.now()}-${index}`,
+    name,
+    platform,
+    niche,
+    format,
+    tone,
+    contactUrl,
+    fr: {
+      tags: frTags,
+      specs: frSpecs,
+      caption: frCaption
+    },
+    en: {
+      tags: enTags,
+      specs: enSpecs,
+      caption: enCaption
+    }
+  };
+}
+
+function parseImportedAffiliates(rawText) {
+  let payload;
+  try {
+    payload = JSON.parse(rawText);
+  } catch (error) {
+    throw new Error("JSON invalide.");
+  }
+
+  if (!Array.isArray(payload)) {
+    throw new Error("Le JSON doit etre un tableau d'affiliates.");
+  }
+
+  return payload.map(normalizeAffiliateShape);
+}
+
+function rerenderAll() {
+  mergeAffiliates();
+  renderCards();
+  applyLanguage();
+  applyFilters();
+}
+
 function getAllCards() {
   return Array.from(refs.cardsGrid.querySelectorAll(".affiliate-card"));
 }
@@ -396,10 +480,7 @@ function bindComposerActions() {
 
       state.localAffiliates.push(affiliate);
       saveLocalAffiliates();
-      mergeAffiliates();
-      renderCards();
-      applyLanguage();
-      applyFilters();
+      rerenderAll();
       refs.affiliateForm.reset();
       setFormFeedback("Affiliate ajoute. Sauve localement.");
       refs.cardsGrid.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -428,11 +509,34 @@ function bindComposerActions() {
 
     state.localAffiliates = [];
     saveLocalAffiliates();
-    mergeAffiliates();
-    renderCards();
-    applyLanguage();
-    applyFilters();
+    rerenderAll();
     setFormFeedback("Ajouts locaux supprimes.");
+  });
+
+  refs.importMergeBtn.addEventListener("click", () => {
+    try {
+      const imported = parseImportedAffiliates(refs.jsonImportInput.value.trim());
+      state.localAffiliates = [...state.localAffiliates, ...imported];
+      saveLocalAffiliates();
+      rerenderAll();
+      setFormFeedback(`${imported.length} affiliate(s) importe(s) en fusion.`);
+      refs.jsonImportInput.value = "";
+    } catch (error) {
+      setFormFeedback(error.message || "Import fusion impossible.", true);
+    }
+  });
+
+  refs.importReplaceBtn.addEventListener("click", () => {
+    try {
+      const imported = parseImportedAffiliates(refs.jsonImportInput.value.trim());
+      state.localAffiliates = imported;
+      saveLocalAffiliates();
+      rerenderAll();
+      setFormFeedback(`${imported.length} affiliate(s) importe(s) en remplacement local.`);
+      refs.jsonImportInput.value = "";
+    } catch (error) {
+      setFormFeedback(error.message || "Import remplacement impossible.", true);
+    }
   });
 }
 

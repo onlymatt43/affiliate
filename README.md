@@ -37,6 +37,13 @@ Le contenu des cartes est maintenant pilote par JSON:
 - Bouton d'export pour copier le JSON de tes ajouts locaux
 - Bouton de reset pour supprimer les ajouts locaux
 
+## Fonctions V3.1
+
+- Import JSON direct depuis l'interface (sans edition manuelle)
+- Mode `Importer (fusion)` pour ajouter au local existant
+- Mode `Importer (remplacer local)` pour ecraser seulement les ajouts locaux
+- Validation des champs obligatoires avant import
+
 Note importante:
 
 - Le fichier `data/affiliates.json` reste la source du repo Git

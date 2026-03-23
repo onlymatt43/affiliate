@@ -177,6 +177,31 @@
             <button type="button" id="clearLocalBtn">Supprimer mes ajouts locaux</button>
             <span id="formFeedback" aria-live="polite"></span>
           </div>
+
+          <section class="import-box" aria-labelledby="importTitle">
+            <h3 id="importTitle">Importer des affiliates (JSON)</h3>
+            <p>Colle un tableau JSON d'affiliates puis importe en fusion ou remplacement local.</p>
+            <textarea
+              id="jsonImportInput"
+              rows="8"
+              placeholder='[
+  {
+    "name": "Nom",
+    "platform": "instagram",
+    "niche": "fitness",
+    "format": "reel",
+    "tone": "motivation",
+    "contactUrl": "https://...",
+    "fr": { "tags": "...", "specs": "...", "caption": "..." },
+    "en": { "tags": "...", "specs": "...", "caption": "..." }
+  }
+]'
+            ></textarea>
+            <div class="composer-actions">
+              <button type="button" id="importMergeBtn">Importer (fusion)</button>
+              <button type="button" id="importReplaceBtn">Importer (remplacer local)</button>
+            </div>
+          </section>
         </form>
       </section>
 
