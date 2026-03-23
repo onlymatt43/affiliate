@@ -1,5 +1,3 @@
-const ACCESS_PASSWORD = "onlymatt-affiliate";
-
 const state = {
   activeLang: "fr",
   viewMode: "full",
@@ -8,6 +6,8 @@ const state = {
   baseAffiliates: [],
   localAffiliates: []
 };
+
+const metaCache = new Map();
 
 const refs = {
   cardsGrid: document.getElementById("cardsGrid"),
@@ -38,7 +38,6 @@ const refs = {
 
 const LOCAL_STORAGE_KEY = "affiliateHubLocalAffiliates";
 const VIEW_MODE_STORAGE_KEY = "affiliateHubViewMode";
-const ACCESS_STORAGE_KEY = "affiliateHubAccess";
 
 const PLATFORM_LABELS = {
   instagram: "Instagram",
@@ -135,6 +134,11 @@ function normalizeAffiliateShape(raw, index) {
 function publicCardMarkup(item, platformLabel, nicheLabel) {
   return `
     <article class="affiliate-card public-card" data-id="${escapeHtml(item.id)}" data-promo-url="${escapeHtml(item.promoUrl)}" data-promo-code="${escapeHtml(item.promoCode)}">
+      <div class="preview-shell" data-preview-shell="${escapeHtml(item.id)}">
+        <img class="preview-image is-hidden" data-preview-image="${escapeHtml(item.id)}" alt="Apercu du lien promo" loading="lazy" />
+        <div class="preview-fallback" data-preview-fallback="${escapeHtml(item.id)}">Apercu lien</div>
+      </div>
+
       <div class="card-head">
         <div>
           <h2>${escapeHtml(item.name)}</h2>
@@ -143,7 +147,6 @@ function publicCardMarkup(item, platformLabel, nicheLabel) {
       </div>
 
       <section class="content-block affiliation-kit">
-        <h3>Meta lien affiliate</h3>
         <div class="kit-row">
           <span class="kit-label">Promo URL</span>
           ${item.promoUrl ? `<a href="${escapeHtml(item.promoUrl)}" target="_blank" rel="noopener noreferrer" class="kit-link">${escapeHtml(item.promoUrl)}</a>` : `<span class="kit-value">-</span>`}
@@ -263,8 +266,53 @@ function cardMarkup(item) {
   return privateCardMarkup(item, platformLabel, nicheLabel);
 }
 
+async function fetchLinkMeta(url) {
+  if (!url) return { image: "", title: "", description: "" };
+  if (metaCache.has(url)) return metaCache.get(url);
+
+  try {
+    const response = await fetch(`/api/link-meta?url=${encodeURIComponent(url)}`);
+    const payload = await response.json();
+    const value = {
+      image: toText(payload.image),
+      title: toText(payload.title),
+      description: toText(payload.description)
+    };
+    metaCache.set(url, value);
+    return value;
+  } catch (error) {
+    const fallback = { image: "", title: "", description: "" };
+    metaCache.set(url, fallback);
+    return fallback;
+  }
+}
+
+async function hydratePublicPreviews() {
+  if (state.isUnlocked) return;
+
+  const cards = Array.from(refs.cardsGrid.querySelectorAll(".public-card"));
+  await Promise.all(
+    cards.map(async (card) => {
+      const id = card.dataset.id;
+      const url = card.dataset.promoUrl || "";
+      if (!id || !url) return;
+
+      const meta = await fetchLinkMeta(url);
+      if (!meta.image) return;
+
+      const img = refs.cardsGrid.querySelector(`[data-preview-image="${CSS.escape(id)}"]`);
+      const fallback = refs.cardsGrid.querySelector(`[data-preview-fallback="${CSS.escape(id)}"]`);
+      if (!img) return;
+      img.src = meta.image;
+      img.classList.remove("is-hidden");
+      if (fallback) fallback.classList.add("is-hidden");
+    })
+  );
+}
+
 function renderCards() {
   refs.cardsGrid.innerHTML = state.affiliates.map(cardMarkup).join("");
+  hydratePublicPreviews();
 }
 
 function mergeAffiliates() {
@@ -323,10 +371,6 @@ function saveViewMode() {
   localStorage.setItem(VIEW_MODE_STORAGE_KEY, state.viewMode);
 }
 
-function saveAccessState() {
-  sessionStorage.setItem(ACCESS_STORAGE_KEY, state.isUnlocked ? "unlocked" : "locked");
-}
-
 function loadLocalAffiliates() {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -360,9 +404,14 @@ function loadViewMode() {
   state.viewMode = stored === "compact" ? "compact" : "full";
 }
 
-function loadAccessState() {
-  const stored = sessionStorage.getItem(ACCESS_STORAGE_KEY);
-  state.isUnlocked = stored === "unlocked";
+async function fetchSession() {
+  try {
+    const response = await fetch("/api/session", { credentials: "include" });
+    const payload = await response.json();
+    state.isUnlocked = Boolean(payload.authenticated);
+  } catch (error) {
+    state.isUnlocked = false;
+  }
 }
 
 async function loadAffiliates() {
@@ -526,9 +575,7 @@ function applyLanguage() {
     btn.classList.toggle("is-active", btn.dataset.lang === state.activeLang);
   });
 
-  if (!state.isUnlocked) {
-    return;
-  }
+  if (!state.isUnlocked) return;
 
   getAllCards().forEach((card) => {
     const panels = card.querySelectorAll(".lang-panel");
@@ -562,7 +609,6 @@ function cardMatches(card, searchTerm, platform, niche, format, tone) {
   }
 
   if (!searchTerm) return true;
-
   const searchableText = card.textContent.toLowerCase();
   return searchableText.includes(searchTerm);
 }
@@ -588,9 +634,7 @@ function applyFilters() {
 function duplicateCard(card) {
   const clone = card.cloneNode(true);
   const nameNode = clone.querySelector("h2");
-  if (nameNode) {
-    nameNode.textContent = `${nameNode.textContent} Copy`;
-  }
+  if (nameNode) nameNode.textContent = `${nameNode.textContent} Copy`;
 
   const sourceId = card.dataset.id || "affiliate";
   const copyCount = getAllCards().filter((item) => (item.dataset.id || "").startsWith(`${sourceId}-copy`)).length;
@@ -628,19 +672,36 @@ function bindViewToggle() {
   });
 }
 
+async function unlock(password) {
+  const response = await fetch("/api/login", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password })
+  });
+  return response.ok;
+}
+
+async function lock() {
+  await fetch("/api/logout", {
+    method: "POST",
+    credentials: "include"
+  });
+}
+
 function bindAccessControls() {
-  refs.unlockBtn.addEventListener("click", () => {
-    if (refs.unlockInput.value === ACCESS_PASSWORD) {
-      state.isUnlocked = true;
-      refs.unlockInput.value = "";
-      saveAccessState();
-      applyAccessMode();
-      rerenderAll();
-      setFormFeedback("Mode admin active.");
+  refs.unlockBtn.addEventListener("click", async () => {
+    const ok = await unlock(refs.unlockInput.value);
+    if (!ok) {
+      refs.accessStatus.textContent = "Mot de passe incorrect";
       return;
     }
 
-    refs.accessStatus.textContent = "Mot de passe incorrect";
+    state.isUnlocked = true;
+    refs.unlockInput.value = "";
+    applyAccessMode();
+    rerenderAll();
+    setFormFeedback("Mode admin active.");
   });
 
   refs.unlockInput.addEventListener("keydown", (event) => {
@@ -650,9 +711,9 @@ function bindAccessControls() {
     }
   });
 
-  refs.lockBtn.addEventListener("click", () => {
+  refs.lockBtn.addEventListener("click", async () => {
+    await lock();
     state.isUnlocked = false;
-    saveAccessState();
     applyAccessMode();
     rerenderAll();
   });
@@ -660,9 +721,7 @@ function bindAccessControls() {
 
 function bindCardActions() {
   refs.cardsGrid.addEventListener("click", async (event) => {
-    if (!state.isUnlocked) {
-      return;
-    }
+    if (!state.isUnlocked) return;
 
     const button = event.target.closest("button[data-action]");
     if (!button) return;
@@ -720,10 +779,7 @@ function bindCardActions() {
 function bindComposerActions() {
   refs.affiliateForm.addEventListener("submit", (event) => {
     event.preventDefault();
-
-    if (!state.isUnlocked) {
-      return;
-    }
+    if (!state.isUnlocked) return;
 
     try {
       const formData = new FormData(refs.affiliateForm);
@@ -748,16 +804,14 @@ function bindComposerActions() {
 
   refs.exportLocalBtn.addEventListener("click", () => {
     if (!state.isUnlocked) return;
-    const payload = JSON.stringify(state.localAffiliates, null, 2);
-    copyText(payload)
+    copyText(JSON.stringify(state.localAffiliates, null, 2))
       .then(() => setFormFeedback("JSON des ajouts locaux copie dans le presse-papiers."))
       .catch(() => setFormFeedback("Export impossible.", true));
   });
 
   refs.exportFullBtn.addEventListener("click", () => {
     if (!state.isUnlocked) return;
-    const payload = JSON.stringify(getFullDataset(), null, 2);
-    copyText(payload)
+    copyText(JSON.stringify(getFullDataset(), null, 2))
       .then(() => setFormFeedback("JSON complet (base + local) copie."))
       .catch(() => setFormFeedback("Export complet impossible.", true));
   });
@@ -781,9 +835,7 @@ function bindComposerActions() {
     }
 
     const confirmed = window.confirm("Supprimer toutes les affiliations ajoutees localement?");
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     state.localAffiliates = [];
     saveLocalAffiliates();
@@ -829,7 +881,7 @@ async function init() {
     await loadAffiliates();
     loadLocalAffiliates();
     loadViewMode();
-    loadAccessState();
+    await fetchSession();
     applyAccessMode();
     mergeAffiliates();
     renderCards();

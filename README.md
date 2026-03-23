@@ -69,7 +69,23 @@ Le contenu des cartes est maintenant pilote par JSON:
 - Les 3 blocs initiaux du fichier `data/affiliates.json` sont retires (fichier vide par defaut)
 - Mode public par defaut: affiche seulement meta, lien promo et code fan
 - Mode admin via mot de passe: debloque formulaire, imports, exports et details complets
-- Le mot de passe est configure dans `app.js` via la constante `ACCESS_PASSWORD`
+
+## Auth backend (option 2)
+
+- Auth admin geree cote serveur via endpoints `api/login`, `api/logout`, `api/session`
+- Cookie de session `HttpOnly` en mode admin (pas de mot de passe hardcode cote front)
+- Configurer dans Vercel:
+	- `ADMIN_PASSWORD` = ton mot de passe admin
+	- `ADMIN_SESSION_TOKEN` = token long aleatoire
+
+## Vue publique allegee
+
+- Sans mot de passe: interface allegee (moins de texte et aucun controle admin)
+- Les visiteurs voient seulement:
+	- meta de la fiche
+	- promo URL
+	- code fan
+	- image meta du lien promo (og:image/twitter:image) quand disponible
 
 Note importante:
 
