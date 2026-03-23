@@ -80,17 +80,19 @@ function normalizeAffiliateShape(raw, index, strict = true) {
     throw new Error(`Element ${index + 1}: format invalide`);
   }
 
-  const name = toText(raw.name);
-  const platform = toText(raw.platform);
-  const niche = toText(raw.niche);
-  const format = toText(raw.format);
-  const tone = toText(raw.tone);
+  const name = toText(raw.name) || `Affiliation ${index + 1}`;
+  const platform = toText(raw.platform) || "instagram";
+  const niche = toText(raw.niche) || "business";
+  const format = toText(raw.format) || "short-video";
+  const tone = toText(raw.tone) || "authority";
 
-  const promoUrl = toText(raw.promoUrl || raw.contactUrl);
-  const promoCode = toText(raw.promoCode || raw.code || (strict ? "" : "CODE-A-DEFINIR"));
-  const socialUrl = toText(raw.socialUrl || raw.contactUrl);
-  const mentions = toText(raw.mentions || (strict ? "" : "@onlymatt"));
-  const postRequirements = toText(raw.postRequirements || raw.fr?.specs || "");
+  const promoUrlRaw = toText(raw.promoUrl || raw.contactUrl);
+  const promoUrl = isValidHttpUrl(promoUrlRaw) ? promoUrlRaw : "";
+  const promoCode = toText(raw.promoCode || raw.code);
+  const socialUrlRaw = toText(raw.socialUrl || raw.contactUrl);
+  const socialUrl = isValidHttpUrl(socialUrlRaw) ? socialUrlRaw : "";
+  const mentions = toText(raw.mentions);
+  const postRequirements = toText(raw.postRequirements || raw.fr?.specs);
   const specificities = toText(raw.specificities);
 
   const fr = raw.fr || {};
@@ -101,26 +103,6 @@ function normalizeAffiliateShape(raw, index, strict = true) {
   const enTags = toText(en.tags);
   const enSpecs = toText(en.specs);
   const enCaption = toText(en.caption);
-
-  if (!name || !platform || !niche || !format || !tone) {
-    throw new Error(`Element ${index + 1}: champs principaux manquants`);
-  }
-
-  if (!promoUrl || !isValidHttpUrl(promoUrl)) {
-    throw new Error(`Element ${index + 1}: promoUrl invalide`);
-  }
-
-  if (strict && (!promoCode || !mentions || !postRequirements)) {
-    throw new Error(`Element ${index + 1}: promoCode/mentions/postRequirements manquants`);
-  }
-
-  if (socialUrl && !isValidHttpUrl(socialUrl)) {
-    throw new Error(`Element ${index + 1}: socialUrl invalide`);
-  }
-
-  if (!frTags || !frSpecs || !frCaption || !enTags || !enSpecs || !enCaption) {
-    throw new Error(`Element ${index + 1}: champs FR/EN manquants`);
-  }
 
   return {
     id: raw.id ? String(raw.id).trim() : `${slugify(name) || "affiliate"}-${Date.now()}-${index}`,
@@ -182,19 +164,19 @@ function cardMarkup(item) {
         <h3>Kit affiliation</h3>
         <div class="kit-row">
           <span class="kit-label">Promo URL</span>
-          <a href="${escapeHtml(item.promoUrl)}" target="_blank" rel="noopener noreferrer" class="kit-link">${escapeHtml(item.promoUrl)}</a>
+          ${item.promoUrl ? `<a href="${escapeHtml(item.promoUrl)}" target="_blank" rel="noopener noreferrer" class="kit-link">${escapeHtml(item.promoUrl)}</a>` : `<span class="kit-value">-</span>`}
         </div>
         <div class="kit-row">
           <span class="kit-label">Code fan</span>
-          <span class="kit-value">${escapeHtml(item.promoCode)}</span>
+          <span class="kit-value">${escapeHtml(item.promoCode || "-")}</span>
         </div>
         <div class="kit-row">
           <span class="kit-label">Mentions</span>
-          <span class="kit-value">${escapeHtml(item.mentions)}</span>
+          <span class="kit-value">${escapeHtml(item.mentions || "-")}</span>
         </div>
         <div class="kit-row">
           <span class="kit-label">Demandes post</span>
-          <span class="kit-value">${escapeHtml(item.postRequirements)}</span>
+          <span class="kit-value">${escapeHtml(item.postRequirements || "-")}</span>
         </div>
         <div class="kit-row">
           <span class="kit-label">Specificites</span>
@@ -404,7 +386,7 @@ function parseImportedAffiliates(rawText) {
     throw new Error("Le JSON doit etre un tableau d'affiliations.");
   }
 
-  return payload.map((item, index) => normalizeAffiliateShape(item, index, true));
+  return payload.map((item, index) => normalizeAffiliateShape(item, index, false));
 }
 
 function rerenderAll() {
