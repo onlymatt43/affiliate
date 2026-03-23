@@ -95,6 +95,37 @@ h1 {
   font-size: clamp(1rem, 2vw, 1.12rem);
 }
 
+.access-bar {
+  margin-top: 1rem;
+  border: 1px dashed #d7bea0;
+  border-radius: 12px;
+  padding: 0.7rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem;
+  background: #fff9ef;
+}
+
+.access-bar label {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.access-bar button {
+  border: 1px solid #c5ab87;
+  background: #fff4e5;
+  border-radius: 10px;
+  padding: 0.5rem 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#accessStatus {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #155c50;
+}
+
 .controls {
   margin-top: 1.4rem;
   display: grid;
@@ -508,6 +539,19 @@ h3 {
   display: none;
 }
 
+body.is-locked .private-only,
+body.is-locked .private-control {
+  display: none !important;
+}
+
+body.is-locked .cards-grid {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+body.is-locked .public-card .card-head {
+  margin-bottom: 0.25rem;
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -527,6 +571,11 @@ h3 {
   .controls {
     grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto;
     align-items: end;
+  }
+
+  .access-bar {
+    grid-template-columns: 1.2fr 2fr auto auto 1fr;
+    align-items: center;
   }
 
   .cards-grid {

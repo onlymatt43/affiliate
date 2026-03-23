@@ -28,6 +28,14 @@
           Centralise promo URL, code fan, demandes de post, hashtags, mentions et specificites.
         </p>
 
+        <div class="access-bar" aria-label="Access control">
+          <label for="unlockInput">Mot de passe admin</label>
+          <input id="unlockInput" type="password" placeholder="Entrer le mot de passe" />
+          <button type="button" id="unlockBtn">Deverrouiller</button>
+          <button type="button" id="lockBtn">Mode public</button>
+          <span id="accessStatus" aria-live="polite">Mode public</span>
+        </div>
+
         <div class="controls">
           <div class="control-group">
             <label for="searchInput">Search</label>
@@ -39,7 +47,7 @@
             />
           </div>
 
-          <div class="control-group">
+          <div class="control-group private-control">
             <label for="platformFilter">Platform</label>
             <select id="platformFilter">
               <option value="all">All</option>
@@ -49,7 +57,7 @@
             </select>
           </div>
 
-          <div class="control-group">
+          <div class="control-group private-control">
             <label for="nicheFilter">Niche</label>
             <select id="nicheFilter">
               <option value="all">All</option>
@@ -59,7 +67,7 @@
             </select>
           </div>
 
-          <div class="control-group">
+          <div class="control-group private-control">
             <label for="formatFilter">Format</label>
             <select id="formatFilter">
               <option value="all">All</option>
@@ -69,7 +77,7 @@
             </select>
           </div>
 
-          <div class="control-group">
+          <div class="control-group private-control">
             <label for="toneFilter">Tone</label>
             <select id="toneFilter">
               <option value="all">All</option>
@@ -79,13 +87,13 @@
             </select>
           </div>
 
-          <fieldset class="lang-toggle" aria-label="Language toggle">
+          <fieldset class="lang-toggle private-control" aria-label="Language toggle">
             <legend>Language</legend>
             <button type="button" class="lang-btn is-active" data-lang="fr">FR</button>
             <button type="button" class="lang-btn" data-lang="en">EN</button>
           </fieldset>
 
-          <fieldset class="view-toggle" aria-label="View mode toggle">
+          <fieldset class="view-toggle private-control" aria-label="View mode toggle">
             <legend>View</legend>
             <button type="button" class="view-btn is-active" data-view="full">Full</button>
             <button type="button" class="view-btn" data-view="compact">Compact</button>
@@ -95,7 +103,7 @@
     </header>
 
     <main class="container">
-      <section class="composer" aria-labelledby="composerTitle">
+      <section class="composer private-only" aria-labelledby="composerTitle">
         <div class="composer__head">
           <h2 id="composerTitle">Ajouter une affiliation (V4)</h2>
           <p>Les ajouts sont sauves localement dans ton navigateur (localStorage).</p>

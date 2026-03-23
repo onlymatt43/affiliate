@@ -64,6 +64,13 @@ Le contenu des cartes est maintenant pilote par JSON:
 - Mode `Compact`: cache les sections longues FR/EN et affiche un workflow court (promo + code + kit)
 - Le choix de vue est sauvegarde localement dans le navigateur
 
+## Fonctions V5 (acces public/prive)
+
+- Les 3 blocs initiaux du fichier `data/affiliates.json` sont retires (fichier vide par defaut)
+- Mode public par defaut: affiche seulement meta, lien promo et code fan
+- Mode admin via mot de passe: debloque formulaire, imports, exports et details complets
+- Le mot de passe est configure dans `app.js` via la constante `ACCESS_PASSWORD`
+
 Note importante:
 
 - Le fichier `data/affiliates.json` reste la source du repo Git

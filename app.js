@@ -1,6 +1,9 @@
+const ACCESS_PASSWORD = "onlymatt-affiliate";
+
 const state = {
   activeLang: "fr",
   viewMode: "full",
+  isUnlocked: false,
   affiliates: [],
   baseAffiliates: [],
   localAffiliates: []
@@ -26,11 +29,16 @@ const refs = {
   clearLocalBtn: document.getElementById("clearLocalBtn"),
   jsonImportInput: document.getElementById("jsonImportInput"),
   importMergeBtn: document.getElementById("importMergeBtn"),
-  importReplaceBtn: document.getElementById("importReplaceBtn")
+  importReplaceBtn: document.getElementById("importReplaceBtn"),
+  unlockInput: document.getElementById("unlockInput"),
+  unlockBtn: document.getElementById("unlockBtn"),
+  lockBtn: document.getElementById("lockBtn"),
+  accessStatus: document.getElementById("accessStatus")
 };
 
 const LOCAL_STORAGE_KEY = "affiliateHubLocalAffiliates";
 const VIEW_MODE_STORAGE_KEY = "affiliateHubViewMode";
+const ACCESS_STORAGE_KEY = "affiliateHubAccess";
 
 const PLATFORM_LABELS = {
   instagram: "Instagram",
@@ -75,7 +83,7 @@ function isValidHttpUrl(value) {
   }
 }
 
-function normalizeAffiliateShape(raw, index, strict = true) {
+function normalizeAffiliateShape(raw, index) {
   if (!raw || typeof raw !== "object") {
     throw new Error(`Element ${index + 1}: format invalide`);
   }
@@ -97,12 +105,6 @@ function normalizeAffiliateShape(raw, index, strict = true) {
 
   const fr = raw.fr || {};
   const en = raw.en || {};
-  const frTags = toText(fr.tags);
-  const frSpecs = toText(fr.specs);
-  const frCaption = toText(fr.caption);
-  const enTags = toText(en.tags);
-  const enSpecs = toText(en.specs);
-  const enCaption = toText(en.caption);
 
   return {
     id: raw.id ? String(raw.id).trim() : `${slugify(name) || "affiliate"}-${Date.now()}-${index}`,
@@ -118,22 +120,44 @@ function normalizeAffiliateShape(raw, index, strict = true) {
     postRequirements,
     specificities,
     fr: {
-      tags: frTags,
-      specs: frSpecs,
-      caption: frCaption
+      tags: toText(fr.tags),
+      specs: toText(fr.specs),
+      caption: toText(fr.caption)
     },
     en: {
-      tags: enTags,
-      specs: enSpecs,
-      caption: enCaption
+      tags: toText(en.tags),
+      specs: toText(en.specs),
+      caption: toText(en.caption)
     }
   };
 }
 
-function cardMarkup(item) {
-  const platformLabel = PLATFORM_LABELS[item.platform] || item.platform;
-  const nicheLabel = NICHE_LABELS[item.niche] || item.niche;
+function publicCardMarkup(item, platformLabel, nicheLabel) {
+  return `
+    <article class="affiliate-card public-card" data-id="${escapeHtml(item.id)}" data-promo-url="${escapeHtml(item.promoUrl)}" data-promo-code="${escapeHtml(item.promoCode)}">
+      <div class="card-head">
+        <div>
+          <h2>${escapeHtml(item.name)}</h2>
+          <p class="meta">${escapeHtml(platformLabel)} · ${escapeHtml(nicheLabel)}</p>
+        </div>
+      </div>
 
+      <section class="content-block affiliation-kit">
+        <h3>Meta lien affiliate</h3>
+        <div class="kit-row">
+          <span class="kit-label">Promo URL</span>
+          ${item.promoUrl ? `<a href="${escapeHtml(item.promoUrl)}" target="_blank" rel="noopener noreferrer" class="kit-link">${escapeHtml(item.promoUrl)}</a>` : `<span class="kit-value">-</span>`}
+        </div>
+        <div class="kit-row">
+          <span class="kit-label">Code fan</span>
+          <span class="kit-value">${escapeHtml(item.promoCode || "-")}</span>
+        </div>
+      </section>
+    </article>
+  `;
+}
+
+function privateCardMarkup(item, platformLabel, nicheLabel) {
   const socialLink = item.socialUrl
     ? `<a href="${escapeHtml(item.socialUrl)}" target="_blank" rel="noopener noreferrer" class="contact-link">Profil social</a>`
     : "";
@@ -228,6 +252,17 @@ function cardMarkup(item) {
   `;
 }
 
+function cardMarkup(item) {
+  const platformLabel = PLATFORM_LABELS[item.platform] || item.platform;
+  const nicheLabel = NICHE_LABELS[item.niche] || item.niche;
+
+  if (!state.isUnlocked) {
+    return publicCardMarkup(item, platformLabel, nicheLabel);
+  }
+
+  return privateCardMarkup(item, platformLabel, nicheLabel);
+}
+
 function renderCards() {
   refs.cardsGrid.innerHTML = state.affiliates.map(cardMarkup).join("");
 }
@@ -288,6 +323,10 @@ function saveViewMode() {
   localStorage.setItem(VIEW_MODE_STORAGE_KEY, state.viewMode);
 }
 
+function saveAccessState() {
+  sessionStorage.setItem(ACCESS_STORAGE_KEY, state.isUnlocked ? "unlocked" : "locked");
+}
+
 function loadLocalAffiliates() {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -305,7 +344,7 @@ function loadLocalAffiliates() {
     state.localAffiliates = parsed
       .map((item, index) => {
         try {
-          return normalizeAffiliateShape(item, index, false);
+          return normalizeAffiliateShape(item, index);
         } catch (error) {
           return null;
         }
@@ -321,6 +360,11 @@ function loadViewMode() {
   state.viewMode = stored === "compact" ? "compact" : "full";
 }
 
+function loadAccessState() {
+  const stored = sessionStorage.getItem(ACCESS_STORAGE_KEY);
+  state.isUnlocked = stored === "unlocked";
+}
+
 async function loadAffiliates() {
   const response = await fetch("./data/affiliates.json", { cache: "no-store" });
   if (!response.ok) {
@@ -331,7 +375,7 @@ async function loadAffiliates() {
     throw new Error("Affiliates payload must be an array");
   }
 
-  state.baseAffiliates = payload.map((item, index) => normalizeAffiliateShape(item, index, false));
+  state.baseAffiliates = payload.map((item, index) => normalizeAffiliateShape(item, index));
 }
 
 function setFormFeedback(message, isError = false) {
@@ -371,7 +415,7 @@ function buildAffiliateFromForm(formData) {
     }
   };
 
-  return normalizeAffiliateShape(raw, 0, true);
+  return normalizeAffiliateShape(raw, 0);
 }
 
 function parseImportedAffiliates(rawText) {
@@ -386,13 +430,14 @@ function parseImportedAffiliates(rawText) {
     throw new Error("Le JSON doit etre un tableau d'affiliations.");
   }
 
-  return payload.map((item, index) => normalizeAffiliateShape(item, index, false));
+  return payload.map((item, index) => normalizeAffiliateShape(item, index));
 }
 
 function rerenderAll() {
   mergeAffiliates();
   renderCards();
   applyLanguage();
+  applyViewMode();
   applyFilters();
 }
 
@@ -481,6 +526,10 @@ function applyLanguage() {
     btn.classList.toggle("is-active", btn.dataset.lang === state.activeLang);
   });
 
+  if (!state.isUnlocked) {
+    return;
+  }
+
   getAllCards().forEach((card) => {
     const panels = card.querySelectorAll(".lang-panel");
     panels.forEach((panel) => {
@@ -495,14 +544,22 @@ function applyViewMode() {
     btn.classList.toggle("is-active", btn.dataset.view === state.viewMode);
   });
 
-  refs.cardsGrid.classList.toggle("is-compact", state.viewMode === "compact");
+  refs.cardsGrid.classList.toggle("is-compact", state.isUnlocked && state.viewMode === "compact");
+}
+
+function applyAccessMode() {
+  document.body.classList.toggle("is-unlocked", state.isUnlocked);
+  document.body.classList.toggle("is-locked", !state.isUnlocked);
+  refs.accessStatus.textContent = state.isUnlocked ? "Mode admin deverrouille" : "Mode public";
 }
 
 function cardMatches(card, searchTerm, platform, niche, format, tone) {
-  if (platform !== "all" && card.dataset.platform !== platform) return false;
-  if (niche !== "all" && card.dataset.niche !== niche) return false;
-  if (format !== "all" && card.dataset.format !== format) return false;
-  if (tone !== "all" && card.dataset.tone !== tone) return false;
+  if (state.isUnlocked) {
+    if (platform !== "all" && card.dataset.platform !== platform) return false;
+    if (niche !== "all" && card.dataset.niche !== niche) return false;
+    if (format !== "all" && card.dataset.format !== format) return false;
+    if (tone !== "all" && card.dataset.tone !== tone) return false;
+  }
 
   if (!searchTerm) return true;
 
@@ -571,8 +628,42 @@ function bindViewToggle() {
   });
 }
 
+function bindAccessControls() {
+  refs.unlockBtn.addEventListener("click", () => {
+    if (refs.unlockInput.value === ACCESS_PASSWORD) {
+      state.isUnlocked = true;
+      refs.unlockInput.value = "";
+      saveAccessState();
+      applyAccessMode();
+      rerenderAll();
+      setFormFeedback("Mode admin active.");
+      return;
+    }
+
+    refs.accessStatus.textContent = "Mot de passe incorrect";
+  });
+
+  refs.unlockInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      refs.unlockBtn.click();
+    }
+  });
+
+  refs.lockBtn.addEventListener("click", () => {
+    state.isUnlocked = false;
+    saveAccessState();
+    applyAccessMode();
+    rerenderAll();
+  });
+}
+
 function bindCardActions() {
   refs.cardsGrid.addEventListener("click", async (event) => {
+    if (!state.isUnlocked) {
+      return;
+    }
+
     const button = event.target.closest("button[data-action]");
     if (!button) return;
 
@@ -630,6 +721,10 @@ function bindComposerActions() {
   refs.affiliateForm.addEventListener("submit", (event) => {
     event.preventDefault();
 
+    if (!state.isUnlocked) {
+      return;
+    }
+
     try {
       const formData = new FormData(refs.affiliateForm);
       const affiliate = buildAffiliateFromForm(formData);
@@ -652,6 +747,7 @@ function bindComposerActions() {
   });
 
   refs.exportLocalBtn.addEventListener("click", () => {
+    if (!state.isUnlocked) return;
     const payload = JSON.stringify(state.localAffiliates, null, 2);
     copyText(payload)
       .then(() => setFormFeedback("JSON des ajouts locaux copie dans le presse-papiers."))
@@ -659,6 +755,7 @@ function bindComposerActions() {
   });
 
   refs.exportFullBtn.addEventListener("click", () => {
+    if (!state.isUnlocked) return;
     const payload = JSON.stringify(getFullDataset(), null, 2);
     copyText(payload)
       .then(() => setFormFeedback("JSON complet (base + local) copie."))
@@ -666,6 +763,7 @@ function bindComposerActions() {
   });
 
   refs.downloadFullBtn.addEventListener("click", () => {
+    if (!state.isUnlocked) return;
     try {
       const filename = `affiliations-export-${new Date().toISOString().slice(0, 10)}.json`;
       downloadJsonFile(filename, getFullDataset());
@@ -676,6 +774,7 @@ function bindComposerActions() {
   });
 
   refs.clearLocalBtn.addEventListener("click", () => {
+    if (!state.isUnlocked) return;
     if (!state.localAffiliates.length) {
       setFormFeedback("Aucun ajout local a supprimer.");
       return;
@@ -693,6 +792,7 @@ function bindComposerActions() {
   });
 
   refs.importMergeBtn.addEventListener("click", () => {
+    if (!state.isUnlocked) return;
     try {
       const imported = parseImportedAffiliates(refs.jsonImportInput.value.trim());
       const deduped = mergeUniqueAffiliates(state.affiliates, imported);
@@ -708,6 +808,7 @@ function bindComposerActions() {
   });
 
   refs.importReplaceBtn.addEventListener("click", () => {
+    if (!state.isUnlocked) return;
     try {
       const imported = parseImportedAffiliates(refs.jsonImportInput.value.trim());
       const deduped = mergeUniqueAffiliates(state.baseAffiliates, imported);
@@ -728,6 +829,8 @@ async function init() {
     await loadAffiliates();
     loadLocalAffiliates();
     loadViewMode();
+    loadAccessState();
+    applyAccessMode();
     mergeAffiliates();
     renderCards();
     applyLanguage();
@@ -736,6 +839,7 @@ async function init() {
     bindFilters();
     bindLanguageToggle();
     bindViewToggle();
+    bindAccessControls();
     bindCardActions();
     bindComposerActions();
   } catch (error) {
