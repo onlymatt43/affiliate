@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Affiliate Hub | onlymatt</title>
+    <meta
+      name="description"
+      content="Hub responsive pour gerer rapidement les informations de publication de tes affiliates."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Manrope:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-orb orb-a" aria-hidden="true"></div>
+    <div class="bg-orb orb-b" aria-hidden="true"></div>
+
+    <header class="hero">
+      <div class="hero__inner container">
+        <p class="eyebrow">onlymatt</p>
+        <h1>Affiliate Posting Hub</h1>
+        <p class="hero__lead">
+          Centralise tags, specs et captions. Trouve vite, copie vite, poste vite.
+        </p>
+
+        <div class="controls">
+          <div class="control-group">
+            <label for="searchInput">Search</label>
+            <input
+              id="searchInput"
+              type="search"
+              placeholder="Nom, tags, niche..."
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="control-group">
+            <label for="platformFilter">Platform</label>
+            <select id="platformFilter">
+              <option value="all">All</option>
+              <option value="instagram">Instagram</option>
+              <option value="tiktok">TikTok</option>
+              <option value="x">X</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="nicheFilter">Niche</label>
+            <select id="nicheFilter">
+              <option value="all">All</option>
+              <option value="fitness">Fitness</option>
+              <option value="business">Business</option>
+              <option value="lifestyle">Lifestyle</option>
+            </select>
+          </div>
+
+          <fieldset class="lang-toggle" aria-label="Language toggle">
+            <legend>Language</legend>
+            <button type="button" class="lang-btn is-active" data-lang="fr">FR</button>
+            <button type="button" class="lang-btn" data-lang="en">EN</button>
+          </fieldset>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section id="cardsGrid" class="cards-grid" aria-live="polite">
+        <article class="affiliate-card" data-platform="instagram" data-niche="fitness">
+          <div class="card-head">
+            <div>
+              <h2>FitAlexPro</h2>
+              <p class="meta">Instagram · Fitness</p>
+            </div>
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" class="contact-link">Profil</a>
+          </div>
+
+          <div class="lang-panel" data-lang="fr">
+            <section class="content-block">
+              <h3>Tags (FR)</h3>
+              <pre class="copy-source" data-copy="tags">#fitness #transformation #coach #routine #onlymatt</pre>
+            </section>
+            <section class="content-block">
+              <h3>Specifications post (FR)</h3>
+              <pre class="copy-source" data-copy="specs">Format: Reel vertical 9:16
+Duree: 25-35 sec
+Hook: 1ere seconde obligatoire
+CTA: "Lien en bio"
+Mention: @onlymatt</pre>
+            </section>
+            <section class="content-block">
+              <h3>Caption exemple (FR)</h3>
+              <pre class="copy-source" data-copy="caption">Tu veux enfin rester constant sur ton entrainement?
+Voici le systeme que j'utilise chaque semaine.
+DM "PLAN" pour le template complet.</pre>
+            </section>
+          </div>
+
+          <div class="lang-panel is-hidden" data-lang="en">
+            <section class="content-block">
+              <h3>Tags (EN)</h3>
+              <pre class="copy-source" data-copy="tags">#fitness #bodygoals #coaching #discipline #onlymatt</pre>
+            </section>
+            <section class="content-block">
+              <h3>Post specs (EN)</h3>
+              <pre class="copy-source" data-copy="specs">Format: Vertical Reel 9:16
+Duration: 25-35 sec
+Hook: Required in first second
+CTA: "Link in bio"
+Mention: @onlymatt</pre>
+            </section>
+            <section class="content-block">
+              <h3>Caption sample (EN)</h3>
+              <pre class="copy-source" data-copy="caption">Want to finally stay consistent with your training?
+This is the weekly system I use.
+DM "PLAN" to get the full template.</pre>
+            </section>
+          </div>
+
+          <div class="card-actions">
+            <button type="button" data-action="copy-tags">Copier tags</button>
+            <button type="button" data-action="copy-specs">Copier specs</button>
+            <button type="button" data-action="copy-all" class="accent">Copier tout</button>
+            <span class="copy-feedback" aria-live="polite"></span>
+          </div>
+        </article>
+
+        <article class="affiliate-card" data-platform="tiktok" data-niche="business">
+          <div class="card-head">
+            <div>
+              <h2>ScaleMia</h2>
+              <p class="meta">TikTok · Business</p>
+            </div>
+            <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" class="contact-link">Profil</a>
+          </div>
+
+          <div class="lang-panel" data-lang="fr">
+            <section class="content-block">
+              <h3>Tags (FR)</h3>
+              <pre class="copy-source" data-copy="tags">#entrepreneur #businesstips #contenu #croissance #onlymatt</pre>
+            </section>
+            <section class="content-block">
+              <h3>Specifications post (FR)</h3>
+              <pre class="copy-source" data-copy="specs">Format: TikTok 9:16
+Duree: 18-28 sec
+Style: Facecam + sous-titres brules
+CTA: "Commente GUIDE"
+Frequence: 4 posts / semaine</pre>
+            </section>
+            <section class="content-block">
+              <h3>Caption exemple (FR)</h3>
+              <pre class="copy-source" data-copy="caption">Si ton contenu ne convertit pas, ce n'est pas ton offre le probleme.
+C'est ton hook.
+Je t'explique mon framework en 3 etapes.</pre>
+            </section>
+          </div>
+
+          <div class="lang-panel is-hidden" data-lang="en">
+            <section class="content-block">
+              <h3>Tags (EN)</h3>
+              <pre class="copy-source" data-copy="tags">#entrepreneur #businesstips #creator #growth #onlymatt</pre>
+            </section>
+            <section class="content-block">
+              <h3>Post specs (EN)</h3>
+              <pre class="copy-source" data-copy="specs">Format: TikTok 9:16
+Duration: 18-28 sec
+Style: Facecam + burned subtitles
+CTA: "Comment GUIDE"
+Frequency: 4 posts / week</pre>
+            </section>
+            <section class="content-block">
+              <h3>Caption sample (EN)</h3>
+              <pre class="copy-source" data-copy="caption">If your content does not convert, your offer is not the issue.
+Your hook is.
+Here is my 3-step framework.</pre>
+            </section>
+          </div>
+
+          <div class="card-actions">
+            <button type="button" data-action="copy-tags">Copier tags</button>
+            <button type="button" data-action="copy-specs">Copier specs</button>
+            <button type="button" data-action="copy-all" class="accent">Copier tout</button>
+            <span class="copy-feedback" aria-live="polite"></span>
+          </div>
+        </article>
+
+        <article class="affiliate-card" data-platform="x" data-niche="lifestyle">
+          <div class="card-head">
+            <div>
+              <h2>NomadTheo</h2>
+              <p class="meta">X · Lifestyle</p>
+            </div>
+            <a href="https://x.com" target="_blank" rel="noopener noreferrer" class="contact-link">Profil</a>
+          </div>
+
+          <div class="lang-panel" data-lang="fr">
+            <section class="content-block">
+              <h3>Tags (FR)</h3>
+              <pre class="copy-source" data-copy="tags">#lifestyle #creatorlife #discipline #habitudes #onlymatt</pre>
+            </section>
+            <section class="content-block">
+              <h3>Specifications post (FR)</h3>
+              <pre class="copy-source" data-copy="specs">Format: Thread 7-10 posts
+Ton: Personnel + concret
+Structure: Hook, histoire, lecon, CTA
+CTA: "RT + follow pour la suite"</pre>
+            </section>
+            <section class="content-block">
+              <h3>Caption exemple (FR)</h3>
+              <pre class="copy-source" data-copy="caption">J'ai arrete de courir apres la motivation.
+J'ai construit un systeme.
+Resultat: plus de constance, moins de friction.</pre>
+            </section>
+          </div>
+
+          <div class="lang-panel is-hidden" data-lang="en">
+            <section class="content-block">
+              <h3>Tags (EN)</h3>
+              <pre class="copy-source" data-copy="tags">#lifestyle #creatorlife #discipline #habits #onlymatt</pre>
+            </section>
+            <section class="content-block">
+              <h3>Post specs (EN)</h3>
+              <pre class="copy-source" data-copy="specs">Format: 7-10 post thread
+Tone: Personal + actionable
+Structure: Hook, story, lesson, CTA
+CTA: "RT + follow for part 2"</pre>
+            </section>
+            <section class="content-block">
+              <h3>Caption sample (EN)</h3>
+              <pre class="copy-source" data-copy="caption">I stopped chasing motivation.
+I built a system.
+Result: more consistency, less friction.</pre>
+            </section>
+          </div>
+
+          <div class="card-actions">
+            <button type="button" data-action="copy-tags">Copier tags</button>
+            <button type="button" data-action="copy-specs">Copier specs</button>
+            <button type="button" data-action="copy-all" class="accent">Copier tout</button>
+            <span class="copy-feedback" aria-live="polite"></span>
+          </div>
+        </article>
+      </section>
+      <p id="resultsInfo" class="results-info">3 affiliates affiches</p>
+    </main>
+
+    <template id="copyAllTemplate">
+      Affiliate: {{name}}
+Platform: {{platform}}
+Niche: {{niche}}
+
+Tags:
+{{tags}}
+
+Specs:
+{{specs}}
+
+Caption:
+{{caption}}
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
