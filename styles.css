@@ -305,6 +305,12 @@ textarea:focus {
   gap: 0.8rem;
 }
 
+.card-head__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 h2 {
   margin: 0;
   font-family: "Space Grotesk", "Futura", sans-serif;
@@ -335,6 +341,44 @@ h2 {
   background: var(--surface-2);
   border-radius: 13px;
   padding: 0.74rem;
+}
+
+.affiliation-kit {
+  background: #fff7ea;
+}
+
+.kit-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 0.45rem;
+  align-items: start;
+  padding: 0.22rem 0;
+}
+
+@media (max-width: 520px) {
+  .kit-row {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+}
+
+.kit-label {
+  font-weight: 700;
+  color: #5a4f3c;
+  font-size: 0.83rem;
+}
+
+.kit-value {
+  color: #27333c;
+  font-size: 0.88rem;
+  white-space: pre-wrap;
+}
+
+.kit-link {
+  color: #0f6f61;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+  font-size: 0.88rem;
 }
 
 h3 {
@@ -381,6 +425,11 @@ h3 {
 .card-actions button[data-action="duplicate"] {
   background: #f8fbff;
   border-color: #8ab8dc;
+}
+
+.card-actions button[data-action="copy-affiliation-kit"] {
+  background: #f4fbf8;
+  border-color: #89baad;
 }
 
 .copy-feedback {

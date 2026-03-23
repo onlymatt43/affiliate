@@ -1,6 +1,6 @@
 # Affiliate Hub
 
-Page web statique responsive pour centraliser les informations de publication affiliate.
+Page web statique responsive pour centraliser les informations d'affiliation (promo, code, exigences, hashtags, mentions, specificites).
 
 ## Lancer en local
 
@@ -19,7 +19,8 @@ Puis ouvrir:
 Le contenu des cartes est maintenant pilote par JSON:
 
 - Fichier: `data/affiliates.json`
-- Champs principaux: `name`, `platform`, `niche`, `format`, `tone`, `contactUrl`
+- Champs principaux: `name`, `platform`, `niche`, `format`, `tone`, `promoUrl`, `promoCode`, `mentions`, `postRequirements`
+- Champs optionnels: `socialUrl`, `specificities`
 - Contenu FR/EN: `fr.tags`, `fr.specs`, `fr.caption`, `en.tags`, `en.specs`, `en.caption`
 
 ## Fonctions V2
@@ -49,6 +50,13 @@ Le contenu des cartes est maintenant pilote par JSON:
 - Telechargement direct d'un fichier `.json` (base + local)
 - Export complet (base + local) copie dans le presse-papiers
 - Anti-doublons lors de l'ajout/import base sur `id`, sinon `name + platform`
+
+## Fonctions V4
+
+- Page orientee operations d'affiliation (pas publication native)
+- Box "Kit affiliation" dans chaque carte: `promoUrl`, `promoCode`, `mentions`, `postRequirements`, `specificities`
+- Profil social conserve en option seulement (`socialUrl`)
+- Nouveaux boutons de copie: URL promo, code promo, kit affiliation
 
 Note importante:
 

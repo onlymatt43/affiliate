@@ -23,9 +23,9 @@
     <header class="hero">
       <div class="hero__inner container">
         <p class="eyebrow">onlymatt</p>
-        <h1>Affiliate Posting Hub</h1>
+        <h1>Affiliate Operations Hub</h1>
         <p class="hero__lead">
-          Centralise tags, specs et captions. Trouve vite, copie vite, poste vite.
+          Centralise promo URL, code fan, demandes de post, hashtags, mentions et specificites.
         </p>
 
         <div class="controls">
@@ -91,7 +91,7 @@
     <main class="container">
       <section class="composer" aria-labelledby="composerTitle">
         <div class="composer__head">
-          <h2 id="composerTitle">Ajouter un affiliate (V3)</h2>
+          <h2 id="composerTitle">Ajouter une affiliation (V4)</h2>
           <p>Les ajouts sont sauves localement dans ton navigateur (localStorage).</p>
         </div>
 
@@ -103,8 +103,23 @@
             </label>
 
             <label>
-              URL profil
-              <input id="fContactUrl" name="contactUrl" type="url" placeholder="https://..." required />
+              URL promo
+              <input id="fPromoUrl" name="promoUrl" type="url" placeholder="https://..." required />
+            </label>
+
+            <label>
+              Code promo fan
+              <input id="fPromoCode" name="promoCode" type="text" placeholder="MATT20" required />
+            </label>
+
+            <label>
+              URL social (optionnel)
+              <input id="fSocialUrl" name="socialUrl" type="url" placeholder="https://..." />
+            </label>
+
+            <label>
+              Mentions @
+              <input id="fMentions" name="mentions" type="text" placeholder="@onlymatt @marque" required />
             </label>
 
             <label>
@@ -169,6 +184,14 @@
               Caption EN
               <textarea id="fEnCaption" name="enCaption" rows="4" required></textarea>
             </label>
+            <label>
+              Demandes post (global)
+              <textarea id="fPostRequirements" name="postRequirements" rows="4" required></textarea>
+            </label>
+            <label>
+              Specificites (optionnel)
+              <textarea id="fSpecificities" name="specificities" rows="4"></textarea>
+            </label>
           </div>
 
           <div class="composer-actions">
@@ -182,7 +205,7 @@
 
           <section class="import-box" aria-labelledby="importTitle">
             <h3 id="importTitle">Importer des affiliates (JSON)</h3>
-            <p>Colle un tableau JSON d'affiliates puis importe en fusion ou remplacement local.</p>
+            <p>Colle un tableau JSON d'affiliations puis importe en fusion ou remplacement local.</p>
             <textarea
               id="jsonImportInput"
               rows="8"
@@ -193,7 +216,12 @@
     "niche": "fitness",
     "format": "reel",
     "tone": "motivation",
-    "contactUrl": "https://...",
+    "promoUrl": "https://...",
+    "promoCode": "MATT20",
+    "socialUrl": "https://...",
+    "mentions": "@onlymatt @brand",
+    "postRequirements": "...",
+    "specificities": "...",
     "fr": { "tags": "...", "specs": "...", "caption": "..." },
     "en": { "tags": "...", "specs": "...", "caption": "..." }
   }
@@ -216,6 +244,12 @@
       Affiliate: {{name}}
 Platform: {{platform}}
 Niche: {{niche}}
+Promo URL: {{promoUrl}}
+Promo code: {{promoCode}}
+Mentions: {{mentions}}
+Demandes post: {{postRequirements}}
+Specificites: {{specificities}}
+Social URL: {{socialUrl}}
 
 Tags:
 {{tags}}

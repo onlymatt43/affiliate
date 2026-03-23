@@ -50,9 +50,108 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function slugify(value) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
+function toText(value) {
+  return String(value || "").trim();
+}
+
+function isValidHttpUrl(value) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch (error) {
+    return false;
+  }
+}
+
+function normalizeAffiliateShape(raw, index, strict = true) {
+  if (!raw || typeof raw !== "object") {
+    throw new Error(`Element ${index + 1}: format invalide`);
+  }
+
+  const name = toText(raw.name);
+  const platform = toText(raw.platform);
+  const niche = toText(raw.niche);
+  const format = toText(raw.format);
+  const tone = toText(raw.tone);
+
+  const promoUrl = toText(raw.promoUrl || raw.contactUrl);
+  const promoCode = toText(raw.promoCode || raw.code || (strict ? "" : "CODE-A-DEFINIR"));
+  const socialUrl = toText(raw.socialUrl || raw.contactUrl);
+  const mentions = toText(raw.mentions || (strict ? "" : "@onlymatt"));
+  const postRequirements = toText(raw.postRequirements || raw.fr?.specs || "");
+  const specificities = toText(raw.specificities);
+
+  const fr = raw.fr || {};
+  const en = raw.en || {};
+  const frTags = toText(fr.tags);
+  const frSpecs = toText(fr.specs);
+  const frCaption = toText(fr.caption);
+  const enTags = toText(en.tags);
+  const enSpecs = toText(en.specs);
+  const enCaption = toText(en.caption);
+
+  if (!name || !platform || !niche || !format || !tone) {
+    throw new Error(`Element ${index + 1}: champs principaux manquants`);
+  }
+
+  if (!promoUrl || !isValidHttpUrl(promoUrl)) {
+    throw new Error(`Element ${index + 1}: promoUrl invalide`);
+  }
+
+  if (strict && (!promoCode || !mentions || !postRequirements)) {
+    throw new Error(`Element ${index + 1}: promoCode/mentions/postRequirements manquants`);
+  }
+
+  if (socialUrl && !isValidHttpUrl(socialUrl)) {
+    throw new Error(`Element ${index + 1}: socialUrl invalide`);
+  }
+
+  if (!frTags || !frSpecs || !frCaption || !enTags || !enSpecs || !enCaption) {
+    throw new Error(`Element ${index + 1}: champs FR/EN manquants`);
+  }
+
+  return {
+    id: raw.id ? String(raw.id).trim() : `${slugify(name) || "affiliate"}-${Date.now()}-${index}`,
+    name,
+    platform,
+    niche,
+    format,
+    tone,
+    promoUrl,
+    promoCode,
+    socialUrl,
+    mentions,
+    postRequirements,
+    specificities,
+    fr: {
+      tags: frTags,
+      specs: frSpecs,
+      caption: frCaption
+    },
+    en: {
+      tags: enTags,
+      specs: enSpecs,
+      caption: enCaption
+    }
+  };
+}
+
 function cardMarkup(item) {
   const platformLabel = PLATFORM_LABELS[item.platform] || item.platform;
   const nicheLabel = NICHE_LABELS[item.niche] || item.niche;
+
+  const socialLink = item.socialUrl
+    ? `<a href="${escapeHtml(item.socialUrl)}" target="_blank" rel="noopener noreferrer" class="contact-link">Profil social</a>`
+    : "";
 
   return `
     <article
@@ -60,15 +159,45 @@ function cardMarkup(item) {
       data-id="${escapeHtml(item.id)}"
       data-platform="${escapeHtml(item.platform)}"
       data-niche="${escapeHtml(item.niche)}"
-      data-format="${escapeHtml(item.format || "")}" 
-      data-tone="${escapeHtml(item.tone || "")}">
+      data-format="${escapeHtml(item.format)}"
+      data-tone="${escapeHtml(item.tone)}"
+      data-promo-url="${escapeHtml(item.promoUrl)}"
+      data-promo-code="${escapeHtml(item.promoCode)}"
+      data-mentions="${escapeHtml(item.mentions)}"
+      data-post-requirements="${escapeHtml(item.postRequirements)}"
+      data-specificities="${escapeHtml(item.specificities)}"
+      data-social-url="${escapeHtml(item.socialUrl)}">
       <div class="card-head">
         <div>
           <h2>${escapeHtml(item.name)}</h2>
           <p class="meta">${escapeHtml(platformLabel)} · ${escapeHtml(nicheLabel)}</p>
         </div>
-        <a href="${escapeHtml(item.contactUrl)}" target="_blank" rel="noopener noreferrer" class="contact-link">Profil</a>
+        <div class="card-head__actions">${socialLink}</div>
       </div>
+
+      <section class="content-block affiliation-kit">
+        <h3>Kit affiliation</h3>
+        <div class="kit-row">
+          <span class="kit-label">Promo URL</span>
+          <a href="${escapeHtml(item.promoUrl)}" target="_blank" rel="noopener noreferrer" class="kit-link">${escapeHtml(item.promoUrl)}</a>
+        </div>
+        <div class="kit-row">
+          <span class="kit-label">Code fan</span>
+          <span class="kit-value">${escapeHtml(item.promoCode)}</span>
+        </div>
+        <div class="kit-row">
+          <span class="kit-label">Mentions</span>
+          <span class="kit-value">${escapeHtml(item.mentions)}</span>
+        </div>
+        <div class="kit-row">
+          <span class="kit-label">Demandes post</span>
+          <span class="kit-value">${escapeHtml(item.postRequirements)}</span>
+        </div>
+        <div class="kit-row">
+          <span class="kit-label">Specificites</span>
+          <span class="kit-value">${escapeHtml(item.specificities || "-")}</span>
+        </div>
+      </section>
 
       <div class="lang-panel" data-lang="fr">
         <section class="content-block">
@@ -101,6 +230,9 @@ function cardMarkup(item) {
       </div>
 
       <div class="card-actions">
+        <button type="button" data-action="copy-promo-url">Copier URL promo</button>
+        <button type="button" data-action="copy-promo-code">Copier code</button>
+        <button type="button" data-action="copy-affiliation-kit">Copier kit affiliation</button>
         <button type="button" data-action="copy-tags">Copier tags</button>
         <button type="button" data-action="copy-specs">Copier specs</button>
         <button type="button" data-action="duplicate">Dupliquer bloc</button>
@@ -176,7 +308,20 @@ function loadLocalAffiliates() {
     }
 
     const parsed = JSON.parse(raw);
-    state.localAffiliates = Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) {
+      state.localAffiliates = [];
+      return;
+    }
+
+    state.localAffiliates = parsed
+      .map((item, index) => {
+        try {
+          return normalizeAffiliateShape(item, index, false);
+        } catch (error) {
+          return null;
+        }
+      })
+      .filter(Boolean);
   } catch (error) {
     state.localAffiliates = [];
   }
@@ -191,16 +336,8 @@ async function loadAffiliates() {
   if (!Array.isArray(payload)) {
     throw new Error("Affiliates payload must be an array");
   }
-  state.baseAffiliates = payload;
-}
 
-function slugify(value) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
+  state.baseAffiliates = payload.map((item, index) => normalizeAffiliateShape(item, index, false));
 }
 
 function setFormFeedback(message, isError = false) {
@@ -215,114 +352,32 @@ function setFormFeedback(message, isError = false) {
 }
 
 function buildAffiliateFromForm(formData) {
-  const name = formData.get("name")?.toString().trim() || "";
-  const contactUrl = formData.get("contactUrl")?.toString().trim() || "";
-  const platform = formData.get("platform")?.toString().trim() || "";
-  const niche = formData.get("niche")?.toString().trim() || "";
-  const format = formData.get("format")?.toString().trim() || "";
-  const tone = formData.get("tone")?.toString().trim() || "";
-  const frTags = formData.get("frTags")?.toString().trim() || "";
-  const enTags = formData.get("enTags")?.toString().trim() || "";
-  const frSpecs = formData.get("frSpecs")?.toString().trim() || "";
-  const enSpecs = formData.get("enSpecs")?.toString().trim() || "";
-  const frCaption = formData.get("frCaption")?.toString().trim() || "";
-  const enCaption = formData.get("enCaption")?.toString().trim() || "";
-
-  if (!name || !contactUrl || !platform || !niche || !format || !tone) {
-    throw new Error("Merci de remplir les champs principaux.");
-  }
-
-  try {
-    const parsed = new URL(contactUrl);
-    if (!parsed.protocol.startsWith("http")) {
-      throw new Error("URL invalide");
-    }
-  } catch (error) {
-    throw new Error("URL profil invalide.");
-  }
-
-  if (!frTags || !enTags || !frSpecs || !enSpecs || !frCaption || !enCaption) {
-    throw new Error("Merci de remplir les champs FR/EN.");
-  }
-
-  return {
-    id: `${slugify(name) || "affiliate"}-${Date.now()}`,
-    name,
-    platform,
-    niche,
-    format,
-    tone,
-    contactUrl,
+  const raw = {
+    id: `${slugify(toText(formData.get("name")) || "affiliate")}-${Date.now()}`,
+    name: toText(formData.get("name")),
+    platform: toText(formData.get("platform")),
+    niche: toText(formData.get("niche")),
+    format: toText(formData.get("format")),
+    tone: toText(formData.get("tone")),
+    promoUrl: toText(formData.get("promoUrl")),
+    promoCode: toText(formData.get("promoCode")),
+    socialUrl: toText(formData.get("socialUrl")),
+    mentions: toText(formData.get("mentions")),
+    postRequirements: toText(formData.get("postRequirements")),
+    specificities: toText(formData.get("specificities")),
     fr: {
-      tags: frTags,
-      specs: frSpecs,
-      caption: frCaption
+      tags: toText(formData.get("frTags")),
+      specs: toText(formData.get("frSpecs")),
+      caption: toText(formData.get("frCaption"))
     },
     en: {
-      tags: enTags,
-      specs: enSpecs,
-      caption: enCaption
+      tags: toText(formData.get("enTags")),
+      specs: toText(formData.get("enSpecs")),
+      caption: toText(formData.get("enCaption"))
     }
   };
-}
 
-function normalizeAffiliateShape(raw, index) {
-  if (!raw || typeof raw !== "object") {
-    throw new Error(`Element ${index + 1}: format invalide`);
-  }
-
-  const name = String(raw.name || "").trim();
-  const platform = String(raw.platform || "").trim();
-  const niche = String(raw.niche || "").trim();
-  const format = String(raw.format || "").trim();
-  const tone = String(raw.tone || "").trim();
-  const contactUrl = String(raw.contactUrl || "").trim();
-  const fr = raw.fr || {};
-  const en = raw.en || {};
-
-  if (!name || !platform || !niche || !format || !tone || !contactUrl) {
-    throw new Error(`Element ${index + 1}: champs principaux manquants`);
-  }
-
-  try {
-    const parsed = new URL(contactUrl);
-    if (!parsed.protocol.startsWith("http")) {
-      throw new Error("URL invalide");
-    }
-  } catch (error) {
-    throw new Error(`Element ${index + 1}: contactUrl invalide`);
-  }
-
-  const frTags = String(fr.tags || "").trim();
-  const frSpecs = String(fr.specs || "").trim();
-  const frCaption = String(fr.caption || "").trim();
-  const enTags = String(en.tags || "").trim();
-  const enSpecs = String(en.specs || "").trim();
-  const enCaption = String(en.caption || "").trim();
-
-  if (!frTags || !frSpecs || !frCaption || !enTags || !enSpecs || !enCaption) {
-    throw new Error(`Element ${index + 1}: champs FR/EN manquants`);
-  }
-
-  return {
-    id: raw.id ? String(raw.id).trim() : `${slugify(name) || "affiliate"}-${Date.now()}-${index}`,
-    name,
-    platform,
-    niche,
-    format,
-    tone,
-    contactUrl,
-    fr: {
-      tags: frTags,
-      specs: frSpecs,
-      caption: frCaption
-    },
-    en: {
-      tags: enTags,
-      specs: enSpecs,
-      caption: enCaption
-    }
-  };
+  return normalizeAffiliateShape(raw, 0, true);
 }
 
 function parseImportedAffiliates(rawText) {
@@ -334,10 +389,10 @@ function parseImportedAffiliates(rawText) {
   }
 
   if (!Array.isArray(payload)) {
-    throw new Error("Le JSON doit etre un tableau d'affiliates.");
+    throw new Error("Le JSON doit etre un tableau d'affiliations.");
   }
 
-  return payload.map(normalizeAffiliateShape);
+  return payload.map((item, index) => normalizeAffiliateShape(item, index, true));
 }
 
 function rerenderAll() {
@@ -382,11 +437,30 @@ function getCardMeta(card) {
   const name = card.querySelector("h2")?.textContent.trim() || "Affiliate";
   const meta = card.querySelector(".meta")?.textContent.trim() || "";
   const [platform = "", niche = ""] = meta.split("·").map((value) => value.trim());
-  return { name, platform, niche };
+
+  const promoUrl = card.dataset.promoUrl || "";
+  const promoCode = card.dataset.promoCode || "";
+  const mentions = card.dataset.mentions || "";
+  const postRequirements = card.dataset.postRequirements || "";
+  const specificities = card.dataset.specificities || "";
+  const socialUrl = card.dataset.socialUrl || "";
+
+  return { name, platform, niche, promoUrl, promoCode, mentions, postRequirements, specificities, socialUrl };
+}
+
+function getAffiliationKitText(card) {
+  const meta = getCardMeta(card);
+  return [
+    `Promo URL: ${meta.promoUrl}`,
+    `Code fan: ${meta.promoCode}`,
+    `Mentions: ${meta.mentions}`,
+    `Demandes post: ${meta.postRequirements}`,
+    `Specificites: ${meta.specificities || "-"}`
+  ].join("\n");
 }
 
 function getCopyAllText(card) {
-  const { name, platform, niche } = getCardMeta(card);
+  const { name, platform, niche, promoUrl, promoCode, mentions, postRequirements, specificities, socialUrl } = getCardMeta(card);
   const tags = getCopyText(card, "tags");
   const specs = getCopyText(card, "specs");
   const caption = getCopyText(card, "caption");
@@ -396,6 +470,12 @@ function getCopyAllText(card) {
     .replace("{{name}}", name)
     .replace("{{platform}}", platform)
     .replace("{{niche}}", niche)
+    .replace("{{promoUrl}}", promoUrl)
+    .replace("{{promoCode}}", promoCode)
+    .replace("{{mentions}}", mentions)
+    .replace("{{postRequirements}}", postRequirements)
+    .replace("{{specificities}}", specificities || "-")
+    .replace("{{socialUrl}}", socialUrl || "-")
     .replace("{{tags}}", tags)
     .replace("{{specs}}", specs)
     .replace("{{caption}}", caption)
@@ -443,7 +523,7 @@ function applyFilters() {
   });
 
   refs.emptyState.classList.toggle("is-hidden", visibleCount !== 0);
-  refs.resultsInfo.textContent = `${visibleCount} affiliate${visibleCount > 1 ? "s" : ""} affiches`;
+  refs.resultsInfo.textContent = `${visibleCount} affiliation${visibleCount > 1 ? "s" : ""} affichee${visibleCount > 1 ? "s" : ""}`;
 }
 
 function duplicateCard(card) {
@@ -490,6 +570,24 @@ function bindCardActions() {
     const action = button.dataset.action;
 
     try {
+      if (action === "copy-promo-url") {
+        await copyText(card.dataset.promoUrl || "");
+        setFeedback(card, "URL promo copiee");
+        return;
+      }
+
+      if (action === "copy-promo-code") {
+        await copyText(card.dataset.promoCode || "");
+        setFeedback(card, "Code promo copie");
+        return;
+      }
+
+      if (action === "copy-affiliation-kit") {
+        await copyText(getAffiliationKitText(card));
+        setFeedback(card, "Kit affiliation copie");
+        return;
+      }
+
       if (action === "copy-tags") {
         await copyText(getCopyText(card, "tags"));
         setFeedback(card, "Tags copies");
@@ -534,17 +632,17 @@ function bindComposerActions() {
       saveLocalAffiliates();
       rerenderAll();
       refs.affiliateForm.reset();
-      setFormFeedback("Affiliate ajoute. Sauve localement.");
+      setFormFeedback("Affiliation ajoutee. Sauvee localement.");
       refs.cardsGrid.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (error) {
-      setFormFeedback(error.message || "Impossible d'ajouter cet affiliate.", true);
+      setFormFeedback(error.message || "Impossible d'ajouter cette affiliation.", true);
     }
   });
 
   refs.exportLocalBtn.addEventListener("click", () => {
     const payload = JSON.stringify(state.localAffiliates, null, 2);
     copyText(payload)
-      .then(() => setFormFeedback("JSON des ajouts copie dans le presse-papiers."))
+      .then(() => setFormFeedback("JSON des ajouts locaux copie dans le presse-papiers."))
       .catch(() => setFormFeedback("Export impossible.", true));
   });
 
@@ -557,7 +655,7 @@ function bindComposerActions() {
 
   refs.downloadFullBtn.addEventListener("click", () => {
     try {
-      const filename = `affiliates-export-${new Date().toISOString().slice(0, 10)}.json`;
+      const filename = `affiliations-export-${new Date().toISOString().slice(0, 10)}.json`;
       downloadJsonFile(filename, getFullDataset());
       setFormFeedback("Fichier JSON telecharge.");
     } catch (error) {
@@ -571,7 +669,7 @@ function bindComposerActions() {
       return;
     }
 
-    const confirmed = window.confirm("Supprimer tous les affiliates ajoutes localement?");
+    const confirmed = window.confirm("Supprimer toutes les affiliations ajoutees localement?");
     if (!confirmed) {
       return;
     }
@@ -590,7 +688,7 @@ function bindComposerActions() {
       state.localAffiliates = [...state.localAffiliates, ...additions];
       saveLocalAffiliates();
       rerenderAll();
-      setFormFeedback(`${deduped.addedCount} ajoute(s), ${deduped.skippedCount} doublon(s) ignores.`);
+      setFormFeedback(`${deduped.addedCount} ajoutee(s), ${deduped.skippedCount} doublon(s) ignores.`);
       refs.jsonImportInput.value = "";
     } catch (error) {
       setFormFeedback(error.message || "Import fusion impossible.", true);
@@ -626,7 +724,7 @@ async function init() {
     bindCardActions();
     bindComposerActions();
   } catch (error) {
-    refs.resultsInfo.textContent = "Erreur: impossible de charger les affiliates";
+    refs.resultsInfo.textContent = "Erreur: impossible de charger les affiliations";
     refs.emptyState.classList.add("is-hidden");
   }
 }
