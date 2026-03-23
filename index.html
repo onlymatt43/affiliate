@@ -89,6 +89,97 @@
     </header>
 
     <main class="container">
+      <section class="composer" aria-labelledby="composerTitle">
+        <div class="composer__head">
+          <h2 id="composerTitle">Ajouter un affiliate (V3)</h2>
+          <p>Les ajouts sont sauves localement dans ton navigateur (localStorage).</p>
+        </div>
+
+        <form id="affiliateForm" class="composer-form">
+          <div class="composer-grid">
+            <label>
+              Nom
+              <input id="fName" name="name" type="text" required />
+            </label>
+
+            <label>
+              URL profil
+              <input id="fContactUrl" name="contactUrl" type="url" placeholder="https://..." required />
+            </label>
+
+            <label>
+              Platform
+              <select id="fPlatform" name="platform" required>
+                <option value="instagram">Instagram</option>
+                <option value="tiktok">TikTok</option>
+                <option value="x">X</option>
+              </select>
+            </label>
+
+            <label>
+              Niche
+              <select id="fNiche" name="niche" required>
+                <option value="fitness">Fitness</option>
+                <option value="business">Business</option>
+                <option value="lifestyle">Lifestyle</option>
+              </select>
+            </label>
+
+            <label>
+              Format
+              <select id="fFormat" name="format" required>
+                <option value="reel">Reel</option>
+                <option value="short-video">Short Video</option>
+                <option value="thread">Thread</option>
+              </select>
+            </label>
+
+            <label>
+              Tone
+              <select id="fTone" name="tone" required>
+                <option value="motivation">Motivation</option>
+                <option value="authority">Authority</option>
+                <option value="story">Story</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="composer-grid composer-grid--2">
+            <label>
+              Tags FR
+              <textarea id="fFrTags" name="frTags" rows="3" required></textarea>
+            </label>
+            <label>
+              Tags EN
+              <textarea id="fEnTags" name="enTags" rows="3" required></textarea>
+            </label>
+            <label>
+              Specs FR
+              <textarea id="fFrSpecs" name="frSpecs" rows="5" required></textarea>
+            </label>
+            <label>
+              Specs EN
+              <textarea id="fEnSpecs" name="enSpecs" rows="5" required></textarea>
+            </label>
+            <label>
+              Caption FR
+              <textarea id="fFrCaption" name="frCaption" rows="4" required></textarea>
+            </label>
+            <label>
+              Caption EN
+              <textarea id="fEnCaption" name="enCaption" rows="4" required></textarea>
+            </label>
+          </div>
+
+          <div class="composer-actions">
+            <button type="submit" class="accent">Ajouter et afficher</button>
+            <button type="button" id="exportLocalBtn">Exporter mes ajouts JSON</button>
+            <button type="button" id="clearLocalBtn">Supprimer mes ajouts locaux</button>
+            <span id="formFeedback" aria-live="polite"></span>
+          </div>
+        </form>
+      </section>
+
       <section id="cardsGrid" class="cards-grid" aria-live="polite"></section>
       <p id="emptyState" class="empty-state is-hidden">Aucun resultat pour ces filtres.</p>
       <p id="resultsInfo" class="results-info">Chargement...</p>

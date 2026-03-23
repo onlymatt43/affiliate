@@ -1,6 +1,8 @@
 const state = {
   activeLang: "fr",
-  affiliates: []
+  affiliates: [],
+  baseAffiliates: [],
+  localAffiliates: []
 };
 
 const refs = {
@@ -13,8 +15,14 @@ const refs = {
   resultsInfo: document.getElementById("resultsInfo"),
   emptyState: document.getElementById("emptyState"),
   langButtons: Array.from(document.querySelectorAll(".lang-btn")),
-  copyAllTemplate: document.getElementById("copyAllTemplate")
+  copyAllTemplate: document.getElementById("copyAllTemplate"),
+  affiliateForm: document.getElementById("affiliateForm"),
+  formFeedback: document.getElementById("formFeedback"),
+  exportLocalBtn: document.getElementById("exportLocalBtn"),
+  clearLocalBtn: document.getElementById("clearLocalBtn")
 };
+
+const LOCAL_STORAGE_KEY = "affiliateHubLocalAffiliates";
 
 const PLATFORM_LABELS = {
   instagram: "Instagram",
@@ -102,6 +110,29 @@ function renderCards() {
   refs.cardsGrid.innerHTML = state.affiliates.map(cardMarkup).join("");
 }
 
+function mergeAffiliates() {
+  state.affiliates = [...state.baseAffiliates, ...state.localAffiliates];
+}
+
+function saveLocalAffiliates() {
+  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state.localAffiliates));
+}
+
+function loadLocalAffiliates() {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (!raw) {
+      state.localAffiliates = [];
+      return;
+    }
+
+    const parsed = JSON.parse(raw);
+    state.localAffiliates = Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    state.localAffiliates = [];
+  }
+}
+
 async function loadAffiliates() {
   const response = await fetch("./data/affiliates.json", { cache: "no-store" });
   if (!response.ok) {
@@ -111,7 +142,79 @@ async function loadAffiliates() {
   if (!Array.isArray(payload)) {
     throw new Error("Affiliates payload must be an array");
   }
-  state.affiliates = payload;
+  state.baseAffiliates = payload;
+}
+
+function slugify(value) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
+function setFormFeedback(message, isError = false) {
+  refs.formFeedback.textContent = message;
+  refs.formFeedback.classList.toggle("error", Boolean(isError));
+  setTimeout(() => {
+    if (refs.formFeedback.textContent === message) {
+      refs.formFeedback.textContent = "";
+      refs.formFeedback.classList.remove("error");
+    }
+  }, 2200);
+}
+
+function buildAffiliateFromForm(formData) {
+  const name = formData.get("name")?.toString().trim() || "";
+  const contactUrl = formData.get("contactUrl")?.toString().trim() || "";
+  const platform = formData.get("platform")?.toString().trim() || "";
+  const niche = formData.get("niche")?.toString().trim() || "";
+  const format = formData.get("format")?.toString().trim() || "";
+  const tone = formData.get("tone")?.toString().trim() || "";
+  const frTags = formData.get("frTags")?.toString().trim() || "";
+  const enTags = formData.get("enTags")?.toString().trim() || "";
+  const frSpecs = formData.get("frSpecs")?.toString().trim() || "";
+  const enSpecs = formData.get("enSpecs")?.toString().trim() || "";
+  const frCaption = formData.get("frCaption")?.toString().trim() || "";
+  const enCaption = formData.get("enCaption")?.toString().trim() || "";
+
+  if (!name || !contactUrl || !platform || !niche || !format || !tone) {
+    throw new Error("Merci de remplir les champs principaux.");
+  }
+
+  try {
+    const parsed = new URL(contactUrl);
+    if (!parsed.protocol.startsWith("http")) {
+      throw new Error("URL invalide");
+    }
+  } catch (error) {
+    throw new Error("URL profil invalide.");
+  }
+
+  if (!frTags || !enTags || !frSpecs || !enSpecs || !frCaption || !enCaption) {
+    throw new Error("Merci de remplir les champs FR/EN.");
+  }
+
+  return {
+    id: `${slugify(name) || "affiliate"}-${Date.now()}`,
+    name,
+    platform,
+    niche,
+    format,
+    tone,
+    contactUrl,
+    fr: {
+      tags: frTags,
+      specs: frSpecs,
+      caption: frCaption
+    },
+    en: {
+      tags: enTags,
+      specs: enSpecs,
+      caption: enCaption
+    }
+  };
 }
 
 function getAllCards() {
@@ -283,15 +386,68 @@ function bindCardActions() {
   });
 }
 
+function bindComposerActions() {
+  refs.affiliateForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    try {
+      const formData = new FormData(refs.affiliateForm);
+      const affiliate = buildAffiliateFromForm(formData);
+
+      state.localAffiliates.push(affiliate);
+      saveLocalAffiliates();
+      mergeAffiliates();
+      renderCards();
+      applyLanguage();
+      applyFilters();
+      refs.affiliateForm.reset();
+      setFormFeedback("Affiliate ajoute. Sauve localement.");
+      refs.cardsGrid.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (error) {
+      setFormFeedback(error.message || "Impossible d'ajouter cet affiliate.", true);
+    }
+  });
+
+  refs.exportLocalBtn.addEventListener("click", () => {
+    const payload = JSON.stringify(state.localAffiliates, null, 2);
+    copyText(payload)
+      .then(() => setFormFeedback("JSON des ajouts copie dans le presse-papiers."))
+      .catch(() => setFormFeedback("Export impossible.", true));
+  });
+
+  refs.clearLocalBtn.addEventListener("click", () => {
+    if (!state.localAffiliates.length) {
+      setFormFeedback("Aucun ajout local a supprimer.");
+      return;
+    }
+
+    const confirmed = window.confirm("Supprimer tous les affiliates ajoutes localement?");
+    if (!confirmed) {
+      return;
+    }
+
+    state.localAffiliates = [];
+    saveLocalAffiliates();
+    mergeAffiliates();
+    renderCards();
+    applyLanguage();
+    applyFilters();
+    setFormFeedback("Ajouts locaux supprimes.");
+  });
+}
+
 async function init() {
   try {
     await loadAffiliates();
+    loadLocalAffiliates();
+    mergeAffiliates();
     renderCards();
     applyLanguage();
     applyFilters();
     bindFilters();
     bindLanguageToggle();
     bindCardActions();
+    bindComposerActions();
   } catch (error) {
     refs.resultsInfo.textContent = "Erreur: impossible de charger les affiliates";
     refs.emptyState.classList.add("is-hidden");

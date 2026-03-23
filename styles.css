@@ -175,6 +175,94 @@ a:focus-visible {
   margin-bottom: 0.8rem;
 }
 
+.composer {
+  margin-bottom: 1rem;
+  border: 1px solid #ecd7b8;
+  background: linear-gradient(180deg, #fffefb 0%, #fff4e4 100%);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 1rem;
+}
+
+.composer__head h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.composer__head p {
+  margin: 0.25rem 0 0;
+  color: #5b646f;
+  font-size: 0.92rem;
+}
+
+.composer-form {
+  margin-top: 0.9rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.composer-grid {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.composer-grid label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 700;
+  font-size: 0.83rem;
+  color: #41505b;
+}
+
+textarea {
+  width: 100%;
+  border: 1px solid #ccb89b;
+  border-radius: 11px;
+  background: #fffefb;
+  padding: 0.64rem 0.75rem;
+  font: inherit;
+  resize: vertical;
+}
+
+textarea:focus {
+  outline: 3px solid #1d7d6f55;
+  outline-offset: 1px;
+}
+
+.composer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.composer-actions button {
+  border: 1px solid #cbaf8a;
+  background: #fff7ec;
+  border-radius: 11px;
+  padding: 0.52rem 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.composer-actions button.accent {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+#formFeedback {
+  min-height: 1.2rem;
+  color: #176356;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+#formFeedback.error {
+  color: #8f2222;
+}
+
 .affiliate-card {
   background: var(--surface);
   border-radius: var(--radius);
@@ -324,6 +412,10 @@ h3 {
   }
 
   .cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .composer-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

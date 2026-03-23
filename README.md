@@ -30,6 +30,19 @@ Le contenu des cartes est maintenant pilote par JSON:
 - Boutons par carte: copier tags, copier specs, copier tout, dupliquer bloc
 - Switch langue FR/EN global
 
+## Fonctions V3
+
+- Mini formulaire pour ajouter un affiliate sans modifier le JSON a la main
+- Les ajouts du formulaire sont sauvegardes en localStorage (dans ton navigateur)
+- Bouton d'export pour copier le JSON de tes ajouts locaux
+- Bouton de reset pour supprimer les ajouts locaux
+
+Note importante:
+
+- Le fichier `data/affiliates.json` reste la source du repo Git
+- Les ajouts via formulaire ne modifient pas automatiquement ce fichier
+- Pour versionner tes nouveaux affiliates dans Git, copie le JSON exporte puis colle-le dans `data/affiliates.json`
+
 ## Deploy Vercel
 
 1. Push ce dossier sur GitHub.
