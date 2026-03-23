@@ -44,6 +44,12 @@ Le contenu des cartes est maintenant pilote par JSON:
 - Mode `Importer (remplacer local)` pour ecraser seulement les ajouts locaux
 - Validation des champs obligatoires avant import
 
+## Fonctions V3.2
+
+- Telechargement direct d'un fichier `.json` (base + local)
+- Export complet (base + local) copie dans le presse-papiers
+- Anti-doublons lors de l'ajout/import base sur `id`, sinon `name + platform`
+
 Note importante:
 
 - Le fichier `data/affiliates.json` reste la source du repo Git

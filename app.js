@@ -19,6 +19,8 @@ const refs = {
   affiliateForm: document.getElementById("affiliateForm"),
   formFeedback: document.getElementById("formFeedback"),
   exportLocalBtn: document.getElementById("exportLocalBtn"),
+  exportFullBtn: document.getElementById("exportFullBtn"),
+  downloadFullBtn: document.getElementById("downloadFullBtn"),
   clearLocalBtn: document.getElementById("clearLocalBtn"),
   jsonImportInput: document.getElementById("jsonImportInput"),
   importMergeBtn: document.getElementById("importMergeBtn"),
@@ -115,6 +117,50 @@ function renderCards() {
 
 function mergeAffiliates() {
   state.affiliates = [...state.baseAffiliates, ...state.localAffiliates];
+}
+
+function affiliateDedupKey(item) {
+  const idKey = String(item.id || "").trim().toLowerCase();
+  if (idKey) return `id:${idKey}`;
+  const name = String(item.name || "").trim().toLowerCase();
+  const platform = String(item.platform || "").trim().toLowerCase();
+  return `np:${name}|${platform}`;
+}
+
+function mergeUniqueAffiliates(existing, incoming) {
+  const seen = new Set(existing.map(affiliateDedupKey));
+  const merged = [...existing];
+  let addedCount = 0;
+  let skippedCount = 0;
+
+  incoming.forEach((item) => {
+    const key = affiliateDedupKey(item);
+    if (seen.has(key)) {
+      skippedCount += 1;
+      return;
+    }
+    seen.add(key);
+    merged.push(item);
+    addedCount += 1;
+  });
+
+  return { merged, addedCount, skippedCount };
+}
+
+function getFullDataset() {
+  return [...state.baseAffiliates, ...state.localAffiliates];
+}
+
+function downloadJsonFile(filename, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function saveLocalAffiliates() {
@@ -478,6 +524,12 @@ function bindComposerActions() {
       const formData = new FormData(refs.affiliateForm);
       const affiliate = buildAffiliateFromForm(formData);
 
+      const candidate = mergeUniqueAffiliates(state.affiliates, [affiliate]);
+      if (candidate.addedCount === 0) {
+        setFormFeedback("Doublon detecte (id ou name+platform).", true);
+        return;
+      }
+
       state.localAffiliates.push(affiliate);
       saveLocalAffiliates();
       rerenderAll();
@@ -494,6 +546,23 @@ function bindComposerActions() {
     copyText(payload)
       .then(() => setFormFeedback("JSON des ajouts copie dans le presse-papiers."))
       .catch(() => setFormFeedback("Export impossible.", true));
+  });
+
+  refs.exportFullBtn.addEventListener("click", () => {
+    const payload = JSON.stringify(getFullDataset(), null, 2);
+    copyText(payload)
+      .then(() => setFormFeedback("JSON complet (base + local) copie."))
+      .catch(() => setFormFeedback("Export complet impossible.", true));
+  });
+
+  refs.downloadFullBtn.addEventListener("click", () => {
+    try {
+      const filename = `affiliates-export-${new Date().toISOString().slice(0, 10)}.json`;
+      downloadJsonFile(filename, getFullDataset());
+      setFormFeedback("Fichier JSON telecharge.");
+    } catch (error) {
+      setFormFeedback("Telechargement impossible.", true);
+    }
   });
 
   refs.clearLocalBtn.addEventListener("click", () => {
@@ -516,10 +585,12 @@ function bindComposerActions() {
   refs.importMergeBtn.addEventListener("click", () => {
     try {
       const imported = parseImportedAffiliates(refs.jsonImportInput.value.trim());
-      state.localAffiliates = [...state.localAffiliates, ...imported];
+      const deduped = mergeUniqueAffiliates(state.affiliates, imported);
+      const additions = deduped.merged.slice(state.affiliates.length);
+      state.localAffiliates = [...state.localAffiliates, ...additions];
       saveLocalAffiliates();
       rerenderAll();
-      setFormFeedback(`${imported.length} affiliate(s) importe(s) en fusion.`);
+      setFormFeedback(`${deduped.addedCount} ajoute(s), ${deduped.skippedCount} doublon(s) ignores.`);
       refs.jsonImportInput.value = "";
     } catch (error) {
       setFormFeedback(error.message || "Import fusion impossible.", true);
@@ -529,10 +600,12 @@ function bindComposerActions() {
   refs.importReplaceBtn.addEventListener("click", () => {
     try {
       const imported = parseImportedAffiliates(refs.jsonImportInput.value.trim());
-      state.localAffiliates = imported;
+      const deduped = mergeUniqueAffiliates(state.baseAffiliates, imported);
+      const keptLocal = deduped.merged.slice(state.baseAffiliates.length);
+      state.localAffiliates = keptLocal;
       saveLocalAffiliates();
       rerenderAll();
-      setFormFeedback(`${imported.length} affiliate(s) importe(s) en remplacement local.`);
+      setFormFeedback(`${keptLocal.length} local(s) gardes, ${deduped.skippedCount} doublon(s) ignores.`);
       refs.jsonImportInput.value = "";
     } catch (error) {
       setFormFeedback(error.message || "Import remplacement impossible.", true);
