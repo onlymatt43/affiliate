@@ -16,11 +16,19 @@ Puis ouvrir:
 
 ## Modifier le contenu
 
-Edite les cartes directement dans `index.html`:
+Le contenu des cartes est maintenant pilote par JSON:
 
-- Nom: balise `<h2>`
-- Plateforme et niche: balise `.meta`
-- Tags/specs/caption FR et EN: blocs `.copy-source`
+- Fichier: `data/affiliates.json`
+- Champs principaux: `name`, `platform`, `niche`, `format`, `tone`, `contactUrl`
+- Contenu FR/EN: `fr.tags`, `fr.specs`, `fr.caption`, `en.tags`, `en.specs`, `en.caption`
+
+## Fonctions V2
+
+- Rendu dynamique depuis `data/affiliates.json`
+- Filtres avances: platform, niche, format, tone
+- Recherche texte globale
+- Boutons par carte: copier tags, copier specs, copier tout, dupliquer bloc
+- Switch langue FR/EN global
 
 ## Deploy Vercel
 

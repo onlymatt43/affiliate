@@ -144,6 +144,11 @@ a:focus-visible {
   background: #fffdf9;
 }
 
+.lang-toggle,
+.control-group {
+  min-width: 0;
+}
+
 .lang-toggle legend {
   padding: 0 0.35rem;
 }
@@ -261,6 +266,11 @@ h3 {
   border-color: var(--accent);
 }
 
+.card-actions button[data-action="duplicate"] {
+  background: #f8fbff;
+  border-color: #8ab8dc;
+}
+
 .copy-feedback {
   min-height: 1.2rem;
   color: #176356;
@@ -276,6 +286,20 @@ h3 {
   margin: 0 0 2.2rem;
   color: #3d4a55;
   font-weight: 700;
+}
+
+.empty-state {
+  margin: 0 0 0.6rem;
+  border: 1px dashed #d3bc9b;
+  background: #fffaf1;
+  color: #66553f;
+  border-radius: 12px;
+  padding: 0.8rem;
+  font-weight: 700;
+}
+
+.is-hidden {
+  display: none;
 }
 
 @keyframes fadeUp {
@@ -295,7 +319,7 @@ h3 {
   }
 
   .controls {
-    grid-template-columns: 2fr 1fr 1fr auto;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
     align-items: end;
   }
 
