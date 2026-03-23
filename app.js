@@ -142,7 +142,6 @@ function publicCardMarkup(item, platformLabel, nicheLabel) {
       <div class="card-head">
         <div>
           <h2>${escapeHtml(item.name)}</h2>
-          <p class="meta">${escapeHtml(platformLabel)} · ${escapeHtml(nicheLabel)}</p>
         </div>
       </div>
 
@@ -597,7 +596,9 @@ function applyViewMode() {
 function applyAccessMode() {
   document.body.classList.toggle("is-unlocked", state.isUnlocked);
   document.body.classList.toggle("is-locked", !state.isUnlocked);
-  refs.accessStatus.textContent = state.isUnlocked ? "Mode admin deverrouille" : "Mode public";
+  if (refs.accessStatus) {
+    refs.accessStatus.textContent = state.isUnlocked ? "Admin actif" : "";
+  }
 }
 
 function cardMatches(card, searchTerm, platform, niche, format, tone) {
@@ -693,7 +694,9 @@ function bindAccessControls() {
   refs.unlockBtn.addEventListener("click", async () => {
     const ok = await unlock(refs.unlockInput.value);
     if (!ok) {
-      refs.accessStatus.textContent = "Mot de passe incorrect";
+      if (refs.accessStatus) {
+        refs.accessStatus.textContent = "Mot de passe incorrect";
+      }
       return;
     }
 

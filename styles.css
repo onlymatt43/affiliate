@@ -589,6 +589,14 @@ body.is-locked .access-bar label {
   display: none;
 }
 
+body.is-locked #resultsInfo {
+  display: none;
+}
+
+body.is-locked #accessStatus {
+  display: none;
+}
+
 body.is-locked .cards-grid {
   grid-template-columns: repeat(1, minmax(0, 1fr));
 }

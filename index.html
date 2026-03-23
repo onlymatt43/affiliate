@@ -28,16 +28,8 @@
           Hub central des liens promo et codes fan.
         </p>
 
-        <div class="access-bar" aria-label="Access control">
-          <label for="unlockInput">Acces admin</label>
-          <input id="unlockInput" type="password" placeholder="Entrer le mot de passe" />
-          <button type="button" id="unlockBtn">Deverrouiller</button>
-          <button type="button" id="lockBtn">Mode public</button>
-          <span id="accessStatus" aria-live="polite">Mode public</span>
-        </div>
-
         <div class="controls">
-          <div class="control-group">
+          <div class="control-group private-control">
             <label for="searchInput">Search</label>
             <input
               id="searchInput"
@@ -252,6 +244,14 @@
       <section id="cardsGrid" class="cards-grid" aria-live="polite"></section>
       <p id="emptyState" class="empty-state is-hidden">Aucun resultat pour ces filtres.</p>
       <p id="resultsInfo" class="results-info">Chargement...</p>
+
+      <section class="access-bar" aria-label="Access control">
+        <label for="unlockInput">Acces admin</label>
+        <input id="unlockInput" type="password" placeholder="Mot de passe admin" />
+        <button type="button" id="unlockBtn">Deverrouiller</button>
+        <button type="button" id="lockBtn" class="private-control">Quitter admin</button>
+        <span id="accessStatus" aria-live="polite"></span>
+      </section>
     </main>
 
     <template id="copyAllTemplate">
