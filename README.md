@@ -2,6 +2,13 @@
 
 Page web statique responsive pour centraliser les informations d'affiliation (promo, code, exigences, hashtags, mentions, specificites).
 
+Le hub supporte maintenant 2 types de blocs via un toggle:
+
+- Affiliates
+- Collaborators
+
+Les collaborators utilisent le meme principe produit (filtres, cartes, edition, import/export, mode public/admin) avec un schema adapte.
+
 ## Lancer en local
 
 Option simple (Python):
@@ -20,8 +27,95 @@ Le contenu des cartes est maintenant pilote par JSON:
 
 - Fichier: `data/affiliates.json`
 - Champs principaux: `name`, `platform`, `niche`, `format`, `tone`, `promoUrl`, `promoCode`, `mentions`, `postRequirements`
-- Champs optionnels: `socialUrl`, `specificities`
+- Champs optionnels: `socialUrl`, `specificities`, `logos` (tableau de 0 a 3 URLs)
 - Contenu FR/EN: `fr.tags`, `fr.specs`, `fr.caption`, `en.tags`, `en.specs`, `en.caption`
+
+Pour les collaborators:
+
+- Fichier: `data/collaborators.json`
+- Champs principaux: `name`, `publicLink`, `platform`, `niche`, `format`, `tone`
+- Champs optionnels: `privateLinks` (liste), `contact`, `rates`, `logos` (tableau de 0 a 3 URLs)
+- Contenu FR/EN: `fr.tags`, `fr.specs`, `fr.caption`, `en.tags`, `en.specs`, `en.caption`
+- Regle: `publicLink` doit etre une URL valide et sert de lien principal visible au mode public
+
+## Google Sheet -> JSON (automatique)
+
+Un template CSV pour Google Sheets est disponible ici:
+
+- `data/affiliates_google_sheet_template.csv`
+
+Apres export de ta sheet en CSV, convertis vers le format attendu par l'app:
+
+```bash
+node scripts/csv-to-affiliates-json.mjs <ton-fichier.csv> data/affiliates.json
+```
+
+Exemple:
+
+```bash
+node scripts/csv-to-affiliates-json.mjs data/affiliates_google_sheet_template.csv data/affiliates.json
+```
+
+Notes:
+
+- `logo1Url`, `logo2Url`, `logo3Url` deviennent `logos` (max 3)
+- Les URLs invalides sont ignorees
+- Les lignes sans `name` sont ignorees
+
+## JSON -> Google Sheet CSV (automatique)
+
+Pour repartir du JSON du projet vers un CSV importable dans Google Sheets:
+
+```bash
+node scripts/affiliates-json-to-csv.mjs data/affiliates.json data/affiliates_export_google_sheet.csv
+```
+
+Notes:
+
+- Le CSV genere reprend les colonnes du template Google Sheet
+- `logos` est reparti sur `logo1Url`, `logo2Url`, `logo3Url`
+- Les colonnes de suivi (`status`, `priority`, `lastUpdated`, `owner`, `notes`) sont laissees vides
+
+## Save automatique (watch local)
+
+Oui: tu peux lancer une synchro automatique locale qui reconvertit des que le fichier source change.
+
+Sheet CSV -> JSON (auto):
+
+```bash
+node scripts/auto-sync-affiliates.mjs --mode=sheet-to-json --source=data/affiliates_google_sheet_template.csv --target=data/affiliates.json
+```
+
+JSON -> Sheet CSV (auto):
+
+```bash
+node scripts/auto-sync-affiliates.mjs --mode=json-to-sheet --source=data/affiliates.json --target=data/affiliates_export_google_sheet.csv
+```
+
+Execution unique (sans watch):
+
+```bash
+node scripts/auto-sync-affiliates.mjs --once
+```
+
+Important:
+
+- C'est un auto-save local (sur ton poste)
+- Sur Vercel/deploy statique, on ne peut pas ecrire automatiquement `data/affiliates.json` sans backend/base de donnees
+
+### Auto-export depuis l'interface admin
+
+Dans le formulaire admin, tu peux activer `Auto-export JSON local`.
+
+Quand active, l'app telecharge automatiquement un fichier JSON local apres:
+
+- ajout
+- modification
+- import fusion
+- import remplacement
+- suppression locale
+
+Le nom du fichier est de type: `affiliations-local-autosave-YYYY-MM-DD.json`.
 
 ## Fonctions V2
 
@@ -78,6 +172,25 @@ Le contenu des cartes est maintenant pilote par JSON:
 	- `ADMIN_PASSWORD` = ton mot de passe admin
 	- `ADMIN_SESSION_TOKEN` = token long aleatoire
 
+## Turso (base de donnees)
+
+Si Turso est configure, l'app lit/écrit les affiliates en base via les endpoints API.
+
+Variables Vercel a definir:
+
+- `TURSO_DATABASE_URL`
+- `TURSO_AUTH_TOKEN`
+
+Comportement:
+
+- Avec Turso: la base distante devient la source de verite
+- Sans Turso: fallback automatique sur `data/affiliates.json` (lecture) + localStorage pour les ajouts admin
+
+Pour collaborators, le meme comportement s'applique avec:
+
+- table `collaborators`
+- fallback `data/collaborators.json`
+
 ## Vue publique allegee
 
 - Sans mot de passe: interface allegee (moins de texte et aucun controle admin)
@@ -86,6 +199,22 @@ Le contenu des cartes est maintenant pilote par JSON:
 	- promo URL
 	- code fan
 	- image meta du lien promo (og:image/twitter:image) quand disponible
+
+Mode public collaborators:
+
+- la carte collaborator est cliquable
+- le clic ouvre le lien principal (`publicLink`) dans un nouvel onglet
+- l'URL n'est pas exposee en texte dans la carte publique
+
+## Endpoints collaborators
+
+- `GET /api/collaborators`
+- `POST /api/collaborators-upsert`
+- `POST /api/collaborators-bulk-upsert`
+- `POST /api/collaborators-replace`
+- `POST /api/collaborators-clear`
+
+Les writes collaborators suivent la meme auth admin que les writes affiliates.
 
 Note importante:
 

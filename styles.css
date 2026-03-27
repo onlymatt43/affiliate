@@ -229,6 +229,37 @@ a:focus-visible {
   color: #fff;
 }
 
+.entity-toggle {
+  margin: 0;
+  border: 1px solid #d8c0a1;
+  border-radius: 12px;
+  padding: 0.35rem;
+  display: inline-flex;
+  gap: 0.35rem;
+  background: #fff9ef;
+}
+
+.entity-toggle legend {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.entity-btn {
+  border: 1px solid #ccb28f;
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.42rem 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.entity-btn.is-active {
+  background: #1f2329;
+  border-color: #1f2329;
+  color: #fff;
+}
+
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -318,6 +349,25 @@ textarea:focus {
   border-color: #83bfb7;
 }
 
+.autosave-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid #d0b99a;
+  background: #fff9ef;
+  border-radius: 11px;
+  padding: 0.48rem 0.68rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #41505b;
+}
+
+.autosave-toggle input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+}
+
 #formFeedback {
   min-height: 1.2rem;
   color: #176356;
@@ -359,6 +409,15 @@ textarea:focus {
   animation: fadeUp 520ms ease-out both;
 }
 
+.collaborator-card.is-clickable {
+  cursor: pointer;
+}
+
+.collaborator-card.is-clickable:focus-visible {
+  outline: 3px solid #1d7d6f55;
+  outline-offset: 3px;
+}
+
 .preview-shell {
   border: 1px solid #ead5b7;
   border-radius: 12px;
@@ -389,6 +448,22 @@ textarea:focus {
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.8rem;
+}
+
+.logo-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.logo-chip {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid #dcc4a4;
+  background: #fff;
+  object-fit: contain;
+  padding: 0.25rem;
 }
 
 .card-head__actions {
@@ -601,6 +676,10 @@ body.is-locked .cards-grid {
   grid-template-columns: repeat(1, minmax(0, 1fr));
 }
 
+body.is-locked .entity-toggle {
+  margin-bottom: 0.25rem;
+}
+
 body.is-locked .public-card .card-head {
   margin-bottom: 0.25rem;
 }
@@ -624,6 +703,10 @@ body.is-locked .public-card .card-head {
   .controls {
     grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto;
     align-items: end;
+  }
+
+  .entity-toggle {
+    justify-self: start;
   }
 
   .access-bar {

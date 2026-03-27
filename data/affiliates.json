@@ -1,1 +1,30 @@
-[]
+[
+  {
+    "id": "aff-001",
+    "name": "Nom Affiliate",
+    "platform": "instagram",
+    "niche": "fitness",
+    "format": "reel",
+    "tone": "motivation",
+    "promoUrl": "https://example.com/promo",
+    "promoCode": "MATT20",
+    "socialUrl": "https://instagram.com/example",
+    "mentions": "@onlymatt @brand",
+    "postRequirements": "1 reel par semaine + code visible en story",
+    "specificities": "Audience FR majoritaire",
+    "logos": [
+      "https://example.com/logo1.png",
+      "https://example.com/logo2.png"
+    ],
+    "fr": {
+      "tags": "#fitness #motivation",
+      "specs": "- Hook 2 sec\\n- CTA code en fin de reel",
+      "caption": "Ton texte FR ici"
+    },
+    "en": {
+      "tags": "#fitness #motivation",
+      "specs": "- 2s hook\\n- CTA code at end",
+      "caption": "Your EN caption here"
+    }
+  }
+]

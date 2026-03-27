@@ -1,0 +1,81 @@
+{
+  "affiliates": [
+    {
+      "id": "intimaly",
+      "name": "INTIMALY",
+      "platform": "instagram",
+      "niche": "lifestyle",
+      "format": "reel",
+      "tone": "authority",
+      "promoUrl": "https://affiliate.onlymatt.ca/INTIMALY",
+      "promoCode": "",
+      "socialUrl": "https://affiliate.intimaly.com/login",
+      "mentions": "@IntimalyGlobal",
+      "postRequirements": "Publier des que possible (meilleurs resultats dans les 24h). Ne pas utiliser le terme \"pre-order\" dans les captions. Ajouter le lien affiliate en bio/Linktree pour tracker les ventes.",
+      "specificities": "Lien direct share & earn: https://intimaly.com/djms0k | Flyer promo: https://drive.google.com/file/d/1a9tQNy0o4vU4u6Ign59tbs9uXYCTKTYZ/view?usp=drive_link | Tracking ventes: https://affiliate.intimaly.com/login | Lien redirect Matt: https://affiliate.onlymatt.ca/INTIMALY | QR: https://api.dub.co/qr?url=https://affiliate.onlymatt.ca/INTIMALY?qr=1",
+      "logos": [],
+      "fr": {
+        "tags": "#intimaly #couple #lifestyle",
+        "specs": "- Tag @IntimalyGlobal\n- CTA vers le lien en bio\n- Eviter \"pre-order\"",
+        "caption": "Le toy est live. Test dispo maintenant via mon lien en bio. Tag @IntimalyGlobal"
+      },
+      "en": {
+        "tags": "#intimaly #couple #lifestyle",
+        "specs": "- Tag @IntimalyGlobal\n- CTA to bio/link\n- Avoid using \"pre-order\"",
+        "caption": "The toy is officially live. Shop through my link in bio. Tag @IntimalyGlobal"
+      }
+    },
+    {
+      "id": "cockblock",
+      "name": "COCKBLOCK",
+      "platform": "instagram",
+      "niche": "lifestyle",
+      "format": "reel",
+      "tone": "authority",
+      "promoUrl": "https://affiliate.onlymatt.ca/COCKBLOCK",
+      "promoCode": "Take 10% Off!",
+      "socialUrl": "https://af.uppromote.com/cockblocktoys/login",
+      "mentions": "@cockblocktoys",
+      "postRequirements": "Utiliser le lien Dub en bio/caption pour tracker. Mettre le CTA coupon dans la caption. Prioriser les posts avec angle offre directe.",
+      "specificities": "Affiliate login: https://af.uppromote.com/cockblocktoys/login | Lien partenaire direct: https://cockblocktoys.com?sca_ref=10861532.VmgEdJLr7tM7gPs&utm_source=affiliate&utm_medium=10861532&utm_campaign=standard | Lien campagne: https://cockblocktoys.com/only300 | Support: partners@cockblocktoys.com | Creative embed: https://af.uppromote.com/creatives/imgembed/135302",
+      "logos": [
+        "https://cdn.uppromote.com/storage/uploads/banner/cocksure-toys-inc/27305d6f7dd5c515ef50d1129198ce94_CockBlock%20Logo_Centred%20Black%20on%20transparent%20TM.png"
+      ],
+      "fr": {
+        "tags": "#cockblock #couple #lifestyle",
+        "specs": "- CTA vers le lien en bio\n- Mentionner l'offre coupon\n- Angle simple et direct",
+        "caption": "Offre active chez COCKBLOCK. Passe par mon lien en bio pour en profiter."
+      },
+      "en": {
+        "tags": "#cockblock #couple #lifestyle",
+        "specs": "- CTA to bio link\n- Mention coupon offer\n- Keep angle clear and direct",
+        "caption": "COCKBLOCK offer is live. Use my bio link to get the deal."
+      }
+    },
+    {
+      "id": "jocktribe",
+      "name": "JOCKTRIBE",
+      "platform": "instagram",
+      "niche": "lifestyle",
+      "format": "reel",
+      "tone": "authority",
+      "promoUrl": "https://affiliate.onlymatt.ca/JockTribe",
+      "promoCode": "ONLYMATT",
+      "socialUrl": "https://jocktribe.com/collections/the-jock-athlete-series?sca_ref=10724322.NgCl7o4ijOmiR",
+      "mentions": "@JockTribe_Store",
+      "postRequirements": "Mentionner la marque JockTribe et tag @JockTribe_Store dans le post. Mettre le code ONLYMATT visible dans caption/CTA.",
+      "specificities": "Offer: 10% off avec code ONLYMATT | Commission: 15% par vente via lien ou code | Lien direct marque: https://jocktribe.com/collections/the-jock-athlete-series?sca_ref=10724322.NgCl7o4ijOmiR",
+      "logos": [],
+      "fr": {
+        "tags": "#JockTribe #AthleteStyle #Menswear",
+        "specs": "- Tag @JockTribe_Store\n- CTA vers le lien en bio\n- Mentionner code ONLYMATT (-10%)",
+        "caption": "Check la collection Athlete Series de JockTribe. Utilise mon code ONLYMATT pour -10% et passe par mon lien en bio."
+      },
+      "en": {
+        "tags": "#JockTribe #AthleteStyle #Menswear",
+        "specs": "- Tag @JockTribe_Store\n- CTA to bio link\n- Mention code ONLYMATT (10% off)",
+        "caption": "Check out the Jock Athlete Series at JockTribe. Use my code ONLYMATT for 10% off and shop via my bio link."
+      }
+    }
+  ]
+}

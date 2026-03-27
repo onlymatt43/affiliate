@@ -29,6 +29,12 @@
         </p>
 
         <div class="controls">
+          <fieldset class="entity-toggle" aria-label="Entity toggle">
+            <legend>Type</legend>
+            <button type="button" class="entity-btn is-active" data-entity="affiliates">Affiliates</button>
+            <button type="button" class="entity-btn" data-entity="collaborators">Collaborators</button>
+          </fieldset>
+
           <div class="control-group private-control">
             <label for="searchInput">Search</label>
             <input
@@ -98,7 +104,7 @@
       <section class="composer private-only" aria-labelledby="composerTitle">
         <div class="composer__head">
           <h2 id="composerTitle">Ajouter une affiliation (V4)</h2>
-          <p>Les ajouts sont sauves localement dans ton navigateur (localStorage).</p>
+          <p id="composerSubtitle">Les ajouts sont sauves localement dans ton navigateur (localStorage).</p>
         </div>
 
         <form id="affiliateForm" class="composer-form">
@@ -108,22 +114,57 @@
               <input id="fName" name="name" type="text" />
             </label>
 
-            <label>
+            <label class="entity-affiliate-only">
               URL promo
               <input id="fPromoUrl" name="promoUrl" type="text" placeholder="https://..." />
             </label>
 
-            <label>
+            <label class="entity-affiliate-only">
               Code promo fan
               <input id="fPromoCode" name="promoCode" type="text" placeholder="MATT20" />
             </label>
 
-            <label>
+            <label class="entity-affiliate-only">
               URL social (optionnel)
               <input id="fSocialUrl" name="socialUrl" type="text" placeholder="https://..." />
             </label>
 
+            <label class="entity-collaborator-only is-hidden">
+              Lien principal (public)
+              <input id="fPublicLink" name="publicLink" type="text" placeholder="https://..." />
+            </label>
+
+            <label class="entity-collaborator-only is-hidden">
+              Liens prives (un par ligne)
+              <textarea id="fPrivateLinks" name="privateLinks" rows="3" placeholder="https://...\nhttps://..."></textarea>
+            </label>
+
+            <label class="entity-collaborator-only is-hidden">
+              Contact
+              <input id="fContact" name="contact" type="text" placeholder="email ou @handle" />
+            </label>
+
+            <label class="entity-collaborator-only is-hidden">
+              Rates / Conditions
+              <textarea id="fRates" name="rates" rows="3" placeholder="Tarifs, disponibilite, conditions..."></textarea>
+            </label>
+
             <label>
+              Logo 1 (URL)
+              <input id="fLogo1" name="logo1" type="text" placeholder="https://..." />
+            </label>
+
+            <label>
+              Logo 2 (URL)
+              <input id="fLogo2" name="logo2" type="text" placeholder="https://..." />
+            </label>
+
+            <label>
+              Logo 3 (URL)
+              <input id="fLogo3" name="logo3" type="text" placeholder="https://..." />
+            </label>
+
+            <label class="entity-affiliate-only">
               Mentions @
               <input id="fMentions" name="mentions" type="text" placeholder="@onlymatt @marque" />
             </label>
@@ -190,18 +231,23 @@
               Caption EN
               <textarea id="fEnCaption" name="enCaption" rows="4"></textarea>
             </label>
-            <label>
+            <label class="entity-affiliate-only">
               Demandes post (global)
               <textarea id="fPostRequirements" name="postRequirements" rows="4"></textarea>
             </label>
-            <label>
+            <label class="entity-affiliate-only">
               Specificites (optionnel)
               <textarea id="fSpecificities" name="specificities" rows="4"></textarea>
             </label>
           </div>
 
           <div class="composer-actions">
-            <button type="submit" class="accent">Ajouter et afficher</button>
+            <button type="submit" id="submitAffiliateBtn" class="accent">Ajouter et afficher</button>
+            <button type="button" id="cancelEditBtn" class="is-hidden">Annuler edition</button>
+            <label class="autosave-toggle" for="autoExportLocalToggle">
+              <input type="checkbox" id="autoExportLocalToggle" />
+              Auto-export JSON local
+            </label>
             <button type="button" id="exportLocalBtn">Exporter mes ajouts JSON</button>
             <button type="button" id="exportFullBtn">Exporter base + local (copie)</button>
             <button type="button" id="downloadFullBtn">Telecharger base + local (.json)</button>
@@ -211,7 +257,7 @@
 
           <section class="import-box" aria-labelledby="importTitle">
             <h3 id="importTitle">Importer des affiliates (JSON)</h3>
-            <p>Colle un tableau JSON d'affiliations puis importe en fusion ou remplacement local.</p>
+            <p id="importSubtitle">Colle un tableau JSON d'affiliations puis importe en fusion ou remplacement local.</p>
             <textarea
               id="jsonImportInput"
               rows="8"
@@ -225,6 +271,7 @@
     "promoUrl": "https://...",
     "promoCode": "MATT20",
     "socialUrl": "https://...",
+    "logos": ["https://...", "https://...", "https://..."],
     "mentions": "@onlymatt @brand",
     "postRequirements": "...",
     "specificities": "...",
@@ -261,9 +308,30 @@ Niche: {{niche}}
 Promo URL: {{promoUrl}}
 Promo code: {{promoCode}}
 Mentions: {{mentions}}
+Logos: {{logos}}
 Demandes post: {{postRequirements}}
 Specificites: {{specificities}}
 Social URL: {{socialUrl}}
+
+Tags:
+{{tags}}
+
+Specs:
+{{specs}}
+
+Caption:
+{{caption}}
+    </template>
+
+    <template id="copyAllCollaboratorTemplate">
+      Collaborator: {{name}}
+Platform: {{platform}}
+Niche: {{niche}}
+Public link: {{publicLink}}
+Private links: {{privateLinks}}
+Contact: {{contact}}
+Rates: {{rates}}
+Logos: {{logos}}
 
 Tags:
 {{tags}}
