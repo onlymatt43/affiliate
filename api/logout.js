@@ -1,4 +1,4 @@
-const { buildSessionCookie } = require("./_auth");
+const { buildSessionCookie } = require("../lib/auth");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {

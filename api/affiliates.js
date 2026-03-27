@@ -1,22 +1,82 @@
-const { listAffiliates } = require("./_affiliates-store");
+const {
+  listAffiliates,
+  upsertAffiliate,
+  bulkUpsertAffiliates,
+  replaceAllAffiliates,
+  clearAffiliates
+} = require("../lib/affiliates-store");
+const { isAuthenticated } = require("../lib/auth");
+
+function getOp(req) {
+  const raw = req.query?.op;
+  if (Array.isArray(raw)) return String(raw[0] || "");
+  return String(raw || "");
+}
 
 module.exports = async function handler(req, res) {
-  if (req.method !== "GET") {
+  const op = getOp(req);
+
+  if (req.method === "GET") {
+    try {
+      const payload = await listAffiliates();
+      res.status(200).json({
+        ok: true,
+        affiliates: payload.affiliates,
+        persistence: {
+          mode: payload.mode,
+          writable: payload.writable
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: "Unable to load affiliates" });
+    }
+    return;
+  }
+
+  if (req.method !== "POST") {
     res.status(405).json({ ok: false, error: "Method not allowed" });
     return;
   }
 
+  if (!isAuthenticated(req)) {
+    res.status(401).json({ ok: false, error: "Unauthorized" });
+    return;
+  }
+
   try {
-    const payload = await listAffiliates();
-    res.status(200).json({
-      ok: true,
-      affiliates: payload.affiliates,
-      persistence: {
-        mode: payload.mode,
-        writable: payload.writable
-      }
-    });
+    if (op === "upsert") {
+      const affiliate = await upsertAffiliate(req.body?.affiliate || req.body);
+      res.status(200).json({ ok: true, affiliate });
+      return;
+    }
+
+    if (op === "bulk-upsert") {
+      const items = Array.isArray(req.body?.affiliates) ? req.body.affiliates : [];
+      const saved = await bulkUpsertAffiliates(items);
+      res.status(200).json({ ok: true, count: saved.length });
+      return;
+    }
+
+    if (op === "replace") {
+      const items = Array.isArray(req.body?.affiliates) ? req.body.affiliates : [];
+      const saved = await replaceAllAffiliates(items);
+      res.status(200).json({ ok: true, count: saved.length });
+      return;
+    }
+
+    if (op === "clear") {
+      await clearAffiliates();
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    res.status(400).json({ ok: false, error: "Missing or invalid op" });
   } catch (error) {
-    res.status(500).json({ ok: false, error: "Unable to load affiliates" });
+    const message = String(error?.message || "");
+    if (message.includes("not configured")) {
+      res.status(501).json({ ok: false, error: "Turso not configured" });
+      return;
+    }
+    res.status(400).json({ ok: false, error: message || "Invalid affiliates payload" });
   }
 };

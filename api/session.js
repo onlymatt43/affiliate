@@ -1,4 +1,4 @@
-const { isAuthenticated } = require("./_auth");
+const { isAuthenticated } = require("../lib/auth");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "GET") {

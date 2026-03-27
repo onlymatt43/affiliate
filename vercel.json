@@ -1,4 +1,14 @@
 {
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/api/affiliates-upsert", "destination": "/api/affiliates?op=upsert" },
+    { "source": "/api/affiliates-bulk-upsert", "destination": "/api/affiliates?op=bulk-upsert" },
+    { "source": "/api/affiliates-replace", "destination": "/api/affiliates?op=replace" },
+    { "source": "/api/affiliates-clear", "destination": "/api/affiliates?op=clear" },
+    { "source": "/api/collaborators-upsert", "destination": "/api/collaborators?op=upsert" },
+    { "source": "/api/collaborators-bulk-upsert", "destination": "/api/collaborators?op=bulk-upsert" },
+    { "source": "/api/collaborators-replace", "destination": "/api/collaborators?op=replace" },
+    { "source": "/api/collaborators-clear", "destination": "/api/collaborators?op=clear" }
+  ]
 }

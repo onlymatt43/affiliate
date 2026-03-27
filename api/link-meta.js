@@ -1,4 +1,4 @@
-const { isAuthenticated } = require("./_auth");
+const { isAuthenticated } = require("../lib/auth");
 
 function extractMeta(html, property, attr = "property") {
   const re = new RegExp(`<meta[^>]*${attr}=["']${property}["'][^>]*content=["']([^"']+)["'][^>]*>`, "i");

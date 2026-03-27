@@ -1,4 +1,4 @@
-const { getAdminPassword, getSessionToken, buildSessionCookie } = require("./_auth");
+const { getAdminPassword, getSessionToken, buildSessionCookie } = require("../lib/auth");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
