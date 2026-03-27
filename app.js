@@ -425,6 +425,11 @@ function collaboratorPublicCardMarkup(item) {
       tabindex="0"
       role="link"
       aria-label="Ouvrir le lien principal de ${escapeHtml(item.name)}">
+      <div class="preview-shell" data-preview-shell="${escapeHtml(item.id)}">
+        <img class="preview-image is-hidden" data-preview-image="${escapeHtml(item.id)}" alt="Apercu du lien collaborator" loading="lazy" />
+        <div class="preview-fallback" data-preview-fallback="${escapeHtml(item.id)}">Apercu lien</div>
+      </div>
+
       ${logoStripMarkup(item.logos, item.name)}
 
       <div class="card-head">
@@ -433,13 +438,6 @@ function collaboratorPublicCardMarkup(item) {
           <p class="meta">Collaborator</p>
         </div>
       </div>
-
-      <section class="content-block affiliation-kit">
-        <div class="kit-row">
-          <span class="kit-label">Lien principal</span>
-          <span class="kit-value">Clique sur la carte pour ouvrir</span>
-        </div>
-      </section>
     </article>
   `;
 }
@@ -574,13 +572,13 @@ async function fetchLinkMeta(url) {
 }
 
 async function hydratePublicPreviews() {
-  if (state.isUnlocked || isCollaboratorMode()) return;
+  if (state.isUnlocked) return;
 
   const cards = Array.from(refs.cardsGrid.querySelectorAll(".public-card"));
   await Promise.all(
     cards.map(async (card) => {
       const id = card.dataset.id;
-      const url = card.dataset.promoUrl || "";
+      const url = card.dataset.promoUrl || card.dataset.publicLink || "";
       if (!id || !url) return;
 
       const meta = await fetchLinkMeta(url);
