@@ -723,7 +723,7 @@ function privateCardMarkup(item, platformLabel, nicheLabel) {
   `;
 }
 
-function collaboratorPublicCardMarkup(item) {
+function collaboratorPublicCardMarkup(item, platformLabel, nicheLabel) {
   return `
     <article
       class="affiliate-card collaborator-card public-card is-clickable"
@@ -733,7 +733,7 @@ function collaboratorPublicCardMarkup(item) {
       role="link"
       aria-label="Ouvrir le lien principal de ${escapeHtml(item.name)}">
       <div class="preview-shell" data-preview-shell="${escapeHtml(item.id)}">
-        <img class="preview-image is-hidden" data-preview-image="${escapeHtml(item.id)}" alt="Apercu du lien collaborator" loading="lazy" />
+        <img class="preview-image is-hidden" data-preview-image="${escapeHtml(item.id)}" alt="Apercu du lien promo" loading="lazy" />
         <div class="preview-fallback" data-preview-fallback="${escapeHtml(item.id)}">Apercu lien</div>
       </div>
 
@@ -742,9 +742,16 @@ function collaboratorPublicCardMarkup(item) {
       <div class="card-head">
         <div>
           <h2>${escapeHtml(item.name)}</h2>
-          <p class="meta">Collaborator</p>
+          <p class="meta">${escapeHtml(platformLabel)} · ${escapeHtml(nicheLabel)}</p>
         </div>
       </div>
+
+      <section class="content-block affiliation-kit">
+        <div class="kit-row">
+          <span class="kit-label">Lien principal</span>
+          ${item.publicLink ? `<a href="${escapeHtml(item.publicLink)}" target="_blank" rel="noopener noreferrer" class="kit-link">${escapeHtml(item.publicLink)}</a>` : `<span class="kit-value">-</span>`}
+        </div>
+      </section>
     </article>
   `;
 }
