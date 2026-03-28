@@ -9,6 +9,20 @@ Le hub supporte maintenant 2 types de blocs via un toggle:
 
 Les collaborators utilisent le meme principe produit (filtres, cartes, edition, import/export, mode public/admin) avec un schema adapte.
 
+## Regle de test (obligatoire)
+
+- Les tests fonctionnels se font uniquement en mode dev API.
+- Ne pas utiliser `python3 -m http.server` pour tester les features.
+- Le front est configure en mode API-only pour les tests: sans API, l'app affiche une erreur explicite.
+
+Commande recommandee:
+
+```bash
+npm start
+```
+
+(ne pas utiliser `npm run dev` — Vercel intercepte le script `dev` et cause une invocation recursive)
+
 ## Lancer en local
 
 Option simple (Python):

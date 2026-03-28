@@ -85,6 +85,13 @@
             </select>
           </div>
 
+          <div class="control-group private-control entity-collaborator-only is-hidden">
+            <label class="control-toggle" for="upcomingBookingsToggle">
+              <input id="upcomingBookingsToggle" type="checkbox" />
+              Voir seulement les RDV a venir
+            </label>
+          </div>
+
           <fieldset class="lang-toggle private-control" aria-label="Language toggle">
             <legend>Language</legend>
             <button type="button" class="lang-btn is-active" data-lang="fr">FR</button>
@@ -145,8 +152,28 @@
             </label>
 
             <label class="entity-collaborator-only is-hidden">
-              Rates / Conditions
-              <textarea id="fRates" name="rates" rows="3" placeholder="Tarifs, disponibilite, conditions..."></textarea>
+              Infos brutes a parser
+              <textarea id="fSourceNotes" name="sourceNotes" rows="5" placeholder="Colle ici des messages, liens, emails, horaires..."></textarea>
+            </label>
+
+            <label class="entity-collaborator-only is-hidden">
+              Date booking
+              <input id="fBookingDate" name="bookingDate" type="text" placeholder="25th" />
+            </label>
+
+            <label class="entity-collaborator-only is-hidden">
+              Heure booking
+              <input id="fBookingTime" name="bookingTime" type="text" placeholder="11AM" />
+            </label>
+
+            <label class="entity-collaborator-only is-hidden">
+              Lieu booking
+              <input id="fBookingLocation" name="bookingLocation" type="text" placeholder="Ritual Hotel" />
+            </label>
+
+            <label class="entity-collaborator-only is-hidden">
+              Rates / Conditions / Notes
+              <textarea id="fRates" name="rates" rows="3" placeholder="Tarifs, disponibilite, conditions, note de booking..."></textarea>
             </label>
 
             <label>
@@ -244,6 +271,7 @@
           <div class="composer-actions">
             <button type="submit" id="submitAffiliateBtn" class="accent">Ajouter et afficher</button>
             <button type="button" id="cancelEditBtn" class="is-hidden">Annuler edition</button>
+            <button type="button" id="collaboratorAutoFillBtn" class="entity-collaborator-only is-hidden">Auto-remplir infos</button>
             <label class="autosave-toggle" for="autoExportLocalToggle">
               <input type="checkbox" id="autoExportLocalToggle" />
               Auto-export JSON local
@@ -291,6 +319,7 @@
       <section id="cardsGrid" class="cards-grid" aria-live="polite"></section>
       <p id="emptyState" class="empty-state is-hidden">Aucun resultat pour ces filtres.</p>
       <p id="resultsInfo" class="results-info">Chargement...</p>
+      <pre id="debugInfo" class="debug-info is-hidden" aria-live="polite"></pre>
 
       <section class="access-bar" aria-label="Access control">
         <label for="unlockInput">Acces admin</label>
@@ -331,6 +360,7 @@ Public link: {{publicLink}}
 Private links: {{privateLinks}}
 Contact: {{contact}}
 Rates: {{rates}}
+Booking: {{booking}}
 Logos: {{logos}}
 
 Tags:

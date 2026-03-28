@@ -3,6 +3,17 @@ const state = {
   activeLang: "fr",
   viewMode: "full",
   isUnlocked: false,
+  authMode: "api",
+  debug: {
+    enabled: new URLSearchParams(window.location.search).get("debug") === "1",
+    loadSourceAffiliates: "unknown",
+    loadSourceCollaborators: "unknown",
+    loadErrorAffiliates: "",
+    loadErrorCollaborators: "",
+    renderedCount: 0,
+    visibleCount: 0,
+    initError: ""
+  },
   persistenceByEntity: {
     affiliates: { mode: "local", writable: false },
     collaborators: { mode: "local", writable: false }
@@ -27,7 +38,9 @@ const refs = {
   nicheFilter: document.getElementById("nicheFilter"),
   formatFilter: document.getElementById("formatFilter"),
   toneFilter: document.getElementById("toneFilter"),
+  upcomingBookingsToggle: document.getElementById("upcomingBookingsToggle"),
   resultsInfo: document.getElementById("resultsInfo"),
+  debugInfo: document.getElementById("debugInfo"),
   emptyState: document.getElementById("emptyState"),
   langButtons: Array.from(document.querySelectorAll(".lang-btn")),
   viewButtons: Array.from(document.querySelectorAll(".view-btn")),
@@ -40,6 +53,7 @@ const refs = {
   affiliateForm: document.getElementById("affiliateForm"),
   submitAffiliateBtn: document.getElementById("submitAffiliateBtn"),
   cancelEditBtn: document.getElementById("cancelEditBtn"),
+  collaboratorAutoFillBtn: document.getElementById("collaboratorAutoFillBtn"),
   autoExportLocalToggle: document.getElementById("autoExportLocalToggle"),
   formFeedback: document.getElementById("formFeedback"),
   exportLocalBtn: document.getElementById("exportLocalBtn"),
@@ -59,6 +73,33 @@ const LOCAL_STORAGE_KEY = "affiliateHubLocalAffiliates";
 const COLLABORATOR_LOCAL_STORAGE_KEY = "affiliateHubLocalCollaborators";
 const VIEW_MODE_STORAGE_KEY = "affiliateHubViewMode";
 const AUTO_EXPORT_STORAGE_KEY = "affiliateHubAutoExportLocal";
+const API_ONLY_TESTING = true;
+
+function updateDebugInfo() {
+  if (!refs.debugInfo) return;
+  if (!state.debug.enabled) {
+    refs.debugInfo.classList.add("is-hidden");
+    refs.debugInfo.textContent = "";
+    return;
+  }
+
+  const lines = [
+    `debug=1 | entity=${state.activeEntity} | unlocked=${state.isUnlocked ? "yes" : "no"} | authMode=${state.authMode}`,
+    `load affiliates=${state.debug.loadSourceAffiliates}${state.debug.loadErrorAffiliates ? ` (error: ${state.debug.loadErrorAffiliates})` : ""}`,
+    `load collaborators=${state.debug.loadSourceCollaborators}${state.debug.loadErrorCollaborators ? ` (error: ${state.debug.loadErrorCollaborators})` : ""}`,
+    `counts affiliates base=${state.baseAffiliates.length} local=${state.localAffiliates.length} merged=${state.affiliates.length}`,
+    `counts collaborators base=${state.baseCollaborators.length} local=${state.localCollaborators.length} merged=${state.collaborators.length}`,
+    `cards rendered=${state.debug.renderedCount} visible=${state.debug.visibleCount}`,
+    `filters search='${refs.searchInput?.value || ""}' platform=${refs.platformFilter?.value || "all"} niche=${refs.nicheFilter?.value || "all"} format=${refs.formatFilter?.value || "all"} tone=${refs.toneFilter?.value || "all"} upcoming=${refs.upcomingBookingsToggle?.checked ? "on" : "off"}`
+  ];
+
+  if (state.debug.initError) {
+    lines.push(`init error=${state.debug.initError}`);
+  }
+
+  refs.debugInfo.textContent = lines.join("\n");
+  refs.debugInfo.classList.remove("is-hidden");
+}
 
 const PLATFORM_LABELS = {
   instagram: "Instagram",
@@ -228,6 +269,269 @@ function normalizePrivateLinks(raw) {
   return deduped;
 }
 
+function normalizeBooking(raw) {
+  const booking = raw && typeof raw === "object" ? raw : {};
+
+  return {
+    dateLabel: toText(booking.dateLabel || booking.date),
+    timeLabel: toText(booking.timeLabel || booking.time),
+    location: toText(booking.location || booking.place),
+    note: toText(booking.note)
+  };
+}
+
+function bookingSummary(raw) {
+  const booking = normalizeBooking(raw);
+  const parts = [booking.dateLabel, booking.timeLabel, booking.location].filter(Boolean);
+  if (parts.length > 0) return parts.join(" · ");
+  return booking.note;
+}
+
+const MONTH_TOKEN_TO_INDEX = {
+  jan: 0,
+  january: 0,
+  janvier: 0,
+  enero: 0,
+  feb: 1,
+  february: 1,
+  fevrier: 1,
+  febrero: 1,
+  mar: 2,
+  march: 2,
+  mars: 2,
+  marzo: 2,
+  apr: 3,
+  april: 3,
+  avril: 3,
+  abril: 3,
+  may: 4,
+  mai: 4,
+  mayo: 4,
+  jun: 5,
+  june: 5,
+  juin: 5,
+  junio: 5,
+  jul: 6,
+  july: 6,
+  juillet: 6,
+  julio: 6,
+  aug: 7,
+  august: 7,
+  aout: 7,
+  agosto: 7,
+  sep: 8,
+  sept: 8,
+  september: 8,
+  septembre: 8,
+  setiembre: 8,
+  oct: 9,
+  october: 9,
+  octobre: 9,
+  octubre: 9,
+  nov: 10,
+  november: 10,
+  novembre: 10,
+  noviembre: 10,
+  dec: 11,
+  december: 11,
+  decembre: 11,
+  diciembre: 11
+};
+
+function normalizeTextForDate(value) {
+  return toText(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function extractDay(value) {
+  const match = toText(value).match(/\b([0-3]?\d)(?:st|nd|rd|th)?\b/i);
+  if (!match) return null;
+  const day = Number(match[1]);
+  return Number.isInteger(day) && day >= 1 && day <= 31 ? day : null;
+}
+
+function extractMonthIndex(...values) {
+  const source = normalizeTextForDate(values.filter(Boolean).join(" "));
+  if (!source) return null;
+
+  for (const [token, monthIndex] of Object.entries(MONTH_TOKEN_TO_INDEX)) {
+    if (source.includes(token)) return monthIndex;
+  }
+
+  const numericMonth = source.match(/\b([0-3]?\d)\s*[\/.-]\s*([0-1]?\d)(?:\s*[\/.-]\s*(\d{2,4}))?\b/);
+  if (numericMonth) {
+    const month = Number(numericMonth[2]);
+    if (month >= 1 && month <= 12) return month - 1;
+  }
+
+  return null;
+}
+
+function extractYear(...values) {
+  const source = values.filter(Boolean).join(" ");
+  const match = source.match(/\b(20\d{2})\b/);
+  return match ? Number(match[1]) : null;
+}
+
+function extractTimeParts(value) {
+  const source = toText(value);
+  if (!source) return null;
+
+  const match = source.match(/\b([01]?\d|2[0-3])(?::([0-5]\d))?\s*(am|pm)?\b/i);
+  if (!match) return null;
+
+  let hours = Number(match[1]);
+  const minutes = match[2] ? Number(match[2]) : 0;
+  const suffix = (match[3] || "").toLowerCase();
+
+  if (suffix === "pm" && hours < 12) hours += 12;
+  if (suffix === "am" && hours === 12) hours = 0;
+
+  return { hours, minutes };
+}
+
+function getBookingTimestamp(item, now = new Date()) {
+  const booking = normalizeBooking(item?.booking);
+  const day = extractDay(booking.dateLabel);
+  if (!day) return null;
+
+  const monthIndex = extractMonthIndex(booking.dateLabel, item?.rates, item?.sourceNotes);
+  const explicitYear = extractYear(booking.dateLabel, item?.rates, item?.sourceNotes);
+  const year = explicitYear || now.getFullYear();
+  const month = monthIndex ?? now.getMonth();
+  const timeParts = extractTimeParts(booking.timeLabel) || { hours: 9, minutes: 0 };
+
+  const candidate = new Date(year, month, day, timeParts.hours, timeParts.minutes, 0, 0);
+  if (Number.isNaN(candidate.getTime())) return null;
+
+  if (!explicitYear && monthIndex == null && candidate.getTime() < now.getTime()) {
+    candidate.setMonth(candidate.getMonth() + 1);
+  }
+
+  if (!explicitYear && monthIndex != null && candidate.getTime() < now.getTime()) {
+    candidate.setFullYear(candidate.getFullYear() + 1);
+  }
+
+  return candidate.getTime();
+}
+
+function titleCaseWords(value) {
+  return toText(value)
+    .split(/\s+/g)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function cleanDetectedUrl(value) {
+  const trimmed = toText(value).replace(/[),.;]+$/g, "");
+  if (!trimmed) return "";
+  if (/^(?:t\.me|x\.com|twitter\.com|instagram\.com|tiktok\.com)\//i.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+  return trimmed;
+}
+
+function extractUrlCandidates(rawText) {
+  const candidates = [];
+  const seen = new Set();
+  const patterns = [
+    /https?:\/\/[^\s<>"]+/gi,
+    /\b(?:t\.me|x\.com|twitter\.com|instagram\.com|tiktok\.com)\/[^\s<>"]+/gi
+  ];
+
+  patterns.forEach((pattern) => {
+    const matches = rawText.match(pattern) || [];
+    matches.forEach((match) => {
+      const cleaned = cleanDetectedUrl(match);
+      if (!isValidHttpUrl(cleaned)) return;
+      const dedupeKey = cleaned.toLowerCase();
+      if (seen.has(dedupeKey)) return;
+      seen.add(dedupeKey);
+      candidates.push(cleaned);
+    });
+  });
+
+  return candidates;
+}
+
+function detectPrivateLinkLabel(url, index) {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+    if (hostname === "t.me") return "Telegram";
+    if (hostname === "t.co") return "Tracking";
+    if (hostname.includes("drive.google.com")) return "Drive";
+    if (hostname.includes("justfor.fans")) return "JustForFans";
+    if (hostname.includes("linktr.ee")) return "Linktree";
+  } catch (error) {
+    return `Lien ${index + 1}`;
+  }
+
+  return `Lien ${index + 1}`;
+}
+
+function extractCollaboratorInsights(rawText) {
+  const source = toText(rawText);
+  if (!source) {
+    return {
+      publicLink: "",
+      privateLinks: [],
+      contact: "",
+      booking: normalizeBooking(null)
+    };
+  }
+
+  const urls = extractUrlCandidates(source);
+  const emails = Array.from(new Set(source.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || []));
+  const handles = Array.from(new Set((source.match(/(^|[\s(/])@[A-Za-z0-9_]{2,32}\b/gm) || [])
+    .map((match) => match.trim())
+    .map((match) => match.replace(/^[(/\s]+/, ""))));
+
+  const publicLink = urls.find((url) => {
+    try {
+      const hostname = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+      return ["x.com", "twitter.com", "instagram.com", "tiktok.com"].includes(hostname);
+    } catch (error) {
+      return false;
+    }
+  }) || urls[0] || "";
+
+  const privateLinks = urls
+    .filter((url) => url !== publicLink)
+    .map((url, index) => ({ label: detectPrivateLinkLabel(url, index), url }));
+
+  const telegramHandles = privateLinks
+    .filter((entry) => entry.label === "Telegram")
+    .map((entry) => {
+      const match = entry.url.match(/t\.me\/([A-Za-z0-9_]+)/i);
+      return match ? `@${match[1]}` : "";
+    })
+    .filter(Boolean);
+
+  const contactParts = [];
+  if (handles.length > 0) contactParts.push(handles.join(" / "));
+  if (emails.length > 0) contactParts.push(emails.join(" / "));
+  if (telegramHandles.length > 0) contactParts.push(`Telegram: ${telegramHandles.join(" / ")}`);
+
+  const scheduleMatch = source.match(/\b(?:for\s+the\s+|on\s+the\s+|the\s+)?(\d{1,2})(?:st|nd|rd|th)\b(?:\s+at\s+|\s*@\s*)(\d{1,2}(?::\d{2})?\s?(?:am|pm))\b/i);
+  const locationMatch = source.match(/\bat\s+(?:the\s+)?([A-Za-z][A-Za-z0-9' -]{1,60}(?:hotel|club|studio|bar|cafe|café|restaurant|resort|villa|house))\b/i);
+  const noteMatch = source.match(/can you confirm our collab.*?(?:[.!?]|$)/i);
+
+  return {
+    publicLink,
+    privateLinks,
+    contact: contactParts.join(" / "),
+    booking: {
+      dateLabel: scheduleMatch ? `${scheduleMatch[1]}th` : "",
+      timeLabel: scheduleMatch ? scheduleMatch[2].toUpperCase().replace(/\s+/g, "") : "",
+      location: locationMatch ? titleCaseWords(locationMatch[1]) : "",
+      note: noteMatch ? toText(noteMatch[0]) : ""
+    }
+  };
+}
+
 function normalizeCollaboratorShape(raw, index) {
   if (!raw || typeof raw !== "object") {
     throw new Error(`Element ${index + 1}: format invalide`);
@@ -249,6 +553,7 @@ function normalizeCollaboratorShape(raw, index) {
   const tone = toText(raw.tone) || "authority";
   const fr = raw.fr || {};
   const en = raw.en || {};
+  const booking = normalizeBooking(raw.booking);
 
   return {
     id: raw.id ? String(raw.id).trim() : `${slugify(name) || "collaborator"}-${Date.now()}-${index}`,
@@ -261,6 +566,8 @@ function normalizeCollaboratorShape(raw, index) {
     privateLinks: normalizePrivateLinks(raw.privateLinks),
     contact: toText(raw.contact),
     rates: toText(raw.rates),
+    sourceNotes: toText(raw.sourceNotes),
+    booking,
     logos: normalizeLogoUrls(raw.logos),
     fr: {
       tags: toText(fr.tags),
@@ -446,6 +753,8 @@ function collaboratorPrivateCardMarkup(item, platformLabel, nicheLabel) {
   const privateLinksText = item.privateLinks?.length
     ? item.privateLinks.map((entry) => `${entry.label}: ${entry.url}`).join("\n")
     : "-";
+  const bookingText = bookingSummary(item.booking) || "-";
+  const bookingTs = getBookingTimestamp(item);
 
   return `
     <article
@@ -459,7 +768,13 @@ function collaboratorPrivateCardMarkup(item, platformLabel, nicheLabel) {
       data-private-links="${escapeHtml(JSON.stringify(item.privateLinks || []))}"
       data-contact="${escapeHtml(item.contact)}"
       data-rates="${escapeHtml(item.rates)}"
+      data-booking="${escapeHtml(JSON.stringify(item.booking || {}))}"
+      data-booking-ts="${bookingTs || ""}"
       data-logos="${escapeHtml(JSON.stringify(item.logos || []))}">
+      <div class="preview-shell" data-preview-shell="${escapeHtml(item.id)}">
+        <img class="preview-image is-hidden" data-preview-image="${escapeHtml(item.id)}" alt="Apercu du lien principal" loading="lazy" />
+        <div class="preview-fallback" data-preview-fallback="${escapeHtml(item.id)}">Apercu lien</div>
+      </div>
       ${logoStripMarkup(item.logos, item.name)}
 
       <div class="card-head">
@@ -482,6 +797,10 @@ function collaboratorPrivateCardMarkup(item, platformLabel, nicheLabel) {
         <div class="kit-row">
           <span class="kit-label">Rates</span>
           <span class="kit-value">${escapeHtml(item.rates || "-")}</span>
+        </div>
+        <div class="kit-row">
+          <span class="kit-label">Booking</span>
+          <span class="kit-value">${escapeHtml(bookingText)}</span>
         </div>
         <div class="kit-row">
           <span class="kit-label">Liens prives</span>
@@ -571,14 +890,11 @@ async function fetchLinkMeta(url) {
   }
 }
 
-async function hydratePublicPreviews() {
-  if (state.isUnlocked) return;
-
-  const cards = Array.from(refs.cardsGrid.querySelectorAll(".public-card"));
+async function hydrateCardPreviews(cards, urlField) {
   await Promise.all(
     cards.map(async (card) => {
       const id = card.dataset.id;
-      const url = card.dataset.promoUrl || card.dataset.publicLink || "";
+      const url = card.dataset[urlField] || "";
       if (!id || !url) return;
 
       const meta = await fetchLinkMeta(url);
@@ -594,9 +910,28 @@ async function hydratePublicPreviews() {
   );
 }
 
+async function hydratePublicPreviews() {
+  if (state.isUnlocked) return;
+  const cards = Array.from(refs.cardsGrid.querySelectorAll(".public-card"));
+  await hydrateCardPreviews(cards, "promoUrl");
+  // collaborator public cards use publicLink
+  const collabCards = Array.from(refs.cardsGrid.querySelectorAll(".collaborator-card.public-card"));
+  await hydrateCardPreviews(collabCards, "publicLink");
+}
+
+async function hydratePrivateCollaboratorPreviews() {
+  if (!state.isUnlocked || !isCollaboratorMode()) return;
+  const cards = Array.from(refs.cardsGrid.querySelectorAll(".collaborator-card:not(.public-card)"));
+  await hydrateCardPreviews(cards, "publicLink");
+}
+
 function renderCards() {
-  refs.cardsGrid.innerHTML = getActiveItems().map(cardMarkup).join("");
+  const activeItems = getActiveItems();
+  state.debug.renderedCount = activeItems.length;
+  refs.cardsGrid.innerHTML = activeItems.map(cardMarkup).join("");
   hydratePublicPreviews();
+  hydratePrivateCollaboratorPreviews();
+  updateDebugInfo();
 }
 
 function mergeAffiliates() {
@@ -763,6 +1098,10 @@ function populateFormFromCollaborator(collaborator) {
   form.elements.privateLinks.value = (collaborator.privateLinks || []).map((entry) => entry.url).join("\n");
   form.elements.contact.value = collaborator.contact || "";
   form.elements.rates.value = collaborator.rates || "";
+  form.elements.sourceNotes.value = collaborator.sourceNotes || "";
+  form.elements.bookingDate.value = collaborator.booking?.dateLabel || "";
+  form.elements.bookingTime.value = collaborator.booking?.timeLabel || "";
+  form.elements.bookingLocation.value = collaborator.booking?.location || "";
   form.elements.logo1.value = collaborator.logos?.[0] || "";
   form.elements.logo2.value = collaborator.logos?.[1] || "";
   form.elements.logo3.value = collaborator.logos?.[2] || "";
@@ -924,52 +1263,95 @@ function loadViewMode() {
 async function fetchSession() {
   try {
     const response = await fetch("/api/session", { credentials: "include" });
+    if (!response.ok) {
+      throw new Error("Session API unavailable");
+    }
     const payload = await response.json();
+    state.authMode = "api";
     state.isUnlocked = Boolean(payload.authenticated);
   } catch (error) {
+    state.authMode = "api-unavailable";
     state.isUnlocked = false;
   }
 }
 
 async function loadAffiliates() {
-  const response = await fetch("/api/affiliates", { cache: "no-store", credentials: "include" });
-  if (!response.ok) {
-    throw new Error("Unable to load affiliates data");
-  }
-  const payload = await response.json();
-  if (!Array.isArray(payload.affiliates)) {
-    throw new Error("Affiliates payload must be an array");
-  }
+  try {
+    const response = await fetch("/api/affiliates", { cache: "no-store", credentials: "include" });
+    if (!response.ok) {
+      throw new Error("Unable to load affiliates data");
+    }
+    const payload = await response.json();
+    if (!Array.isArray(payload.affiliates)) {
+      throw new Error("Affiliates payload must be an array");
+    }
 
-  state.persistenceByEntity.affiliates = {
-    mode: payload.persistence?.mode === "turso" ? "remote" : "local",
-    writable: Boolean(payload.persistence?.writable)
-  };
-  state.baseAffiliates = payload.affiliates.map((item, index) => normalizeAffiliateShape(item, index));
+    state.persistenceByEntity.affiliates = {
+      mode: payload.persistence?.mode === "turso" ? "remote" : "local",
+      writable: Boolean(payload.persistence?.writable)
+    };
+    state.debug.loadSourceAffiliates = "api";
+    state.debug.loadErrorAffiliates = "";
+    state.baseAffiliates = payload.affiliates
+      .map((item, index) => {
+        try {
+          return normalizeAffiliateShape(item, index);
+        } catch (error) {
+          return null;
+        }
+      })
+      .filter(Boolean);
 
-  if (state.persistenceByEntity.affiliates.mode === "remote") {
-    state.localAffiliates = [];
+    if (state.persistenceByEntity.affiliates.mode === "remote") {
+      state.localAffiliates = [];
+    }
+  } catch (error) {
+    state.debug.loadSourceAffiliates = "api";
+    state.debug.loadErrorAffiliates = String(error?.message || "api fetch failed");
+    if (API_ONLY_TESTING) {
+      throw new Error("API-only testing enabled: run the app with dev API server (no local fallback).");
+    }
+    throw error;
   }
 }
 
 async function loadCollaborators() {
-  const response = await fetch("/api/collaborators", { cache: "no-store", credentials: "include" });
-  if (!response.ok) {
-    throw new Error("Unable to load collaborators data");
-  }
-  const payload = await response.json();
-  if (!Array.isArray(payload.collaborators)) {
-    throw new Error("Collaborators payload must be an array");
-  }
+  try {
+    const response = await fetch("/api/collaborators", { cache: "no-store", credentials: "include" });
+    if (!response.ok) {
+      throw new Error("Unable to load collaborators data");
+    }
+    const payload = await response.json();
+    if (!Array.isArray(payload.collaborators)) {
+      throw new Error("Collaborators payload must be an array");
+    }
 
-  state.persistenceByEntity.collaborators = {
-    mode: payload.persistence?.mode === "turso" ? "remote" : "local",
-    writable: Boolean(payload.persistence?.writable)
-  };
-  state.baseCollaborators = payload.collaborators.map((item, index) => normalizeCollaboratorShape(item, index));
+    state.persistenceByEntity.collaborators = {
+      mode: payload.persistence?.mode === "turso" ? "remote" : "local",
+      writable: Boolean(payload.persistence?.writable)
+    };
+    state.debug.loadSourceCollaborators = "api";
+    state.debug.loadErrorCollaborators = "";
+    state.baseCollaborators = payload.collaborators
+    .map((item, index) => {
+      try {
+        return normalizeCollaboratorShape(item, index);
+      } catch (error) {
+        return null;
+      }
+    })
+    .filter(Boolean);
 
-  if (state.persistenceByEntity.collaborators.mode === "remote") {
-    state.localCollaborators = [];
+    if (state.persistenceByEntity.collaborators.mode === "remote") {
+      state.localCollaborators = [];
+    }
+  } catch (error) {
+    state.debug.loadSourceCollaborators = "api";
+    state.debug.loadErrorCollaborators = String(error?.message || "api fetch failed");
+    if (API_ONLY_TESTING) {
+      throw new Error("API-only testing enabled: run the app with dev API server (no local fallback).");
+    }
+    throw error;
   }
 }
 
@@ -1019,7 +1401,9 @@ function buildAffiliateFromForm(formData) {
 }
 
 function buildCollaboratorFromForm(formData) {
-  const privateLinksRaw = toText(formData.get("privateLinks"));
+  const sourceNotes = toText(formData.get("sourceNotes"));
+  const extracted = extractCollaboratorInsights(sourceNotes);
+  const privateLinksRaw = toText(formData.get("privateLinks")) || extracted.privateLinks.map((entry) => entry.url).join("\n");
 
   const raw = {
     id: `${slugify(toText(formData.get("name")) || "collaborator")}-${Date.now()}`,
@@ -1028,10 +1412,17 @@ function buildCollaboratorFromForm(formData) {
     niche: toText(formData.get("niche")),
     format: toText(formData.get("format")),
     tone: toText(formData.get("tone")),
-    publicLink: toText(formData.get("publicLink")),
+    publicLink: toText(formData.get("publicLink")) || extracted.publicLink,
     privateLinks: privateLinksRaw,
-    contact: toText(formData.get("contact")),
+    contact: toText(formData.get("contact")) || extracted.contact,
     rates: toText(formData.get("rates")),
+    sourceNotes,
+    booking: {
+      dateLabel: toText(formData.get("bookingDate")) || extracted.booking.dateLabel,
+      timeLabel: toText(formData.get("bookingTime")) || extracted.booking.timeLabel,
+      location: toText(formData.get("bookingLocation")) || extracted.booking.location,
+      note: extracted.booking.note
+    },
     logos: [
       toText(formData.get("logo1")),
       toText(formData.get("logo2")),
@@ -1191,11 +1582,17 @@ function getCardMeta(card) {
     const rates = card.dataset.rates || "";
 
     let privateLinks = [];
+    let booking = normalizeBooking(null);
     let logos = [];
     try {
       privateLinks = JSON.parse(card.dataset.privateLinks || "[]");
     } catch (error) {
       privateLinks = [];
+    }
+    try {
+      booking = normalizeBooking(JSON.parse(card.dataset.booking || "{}"));
+    } catch (error) {
+      booking = normalizeBooking(null);
     }
     try {
       const parsedLogos = JSON.parse(card.dataset.logos || "[]");
@@ -1204,7 +1601,7 @@ function getCardMeta(card) {
       logos = [];
     }
 
-    return { name, platform, niche, publicLink, privateLinks, contact, rates, logos };
+    return { name, platform, niche, publicLink, privateLinks, contact, rates, booking, logos };
   }
 
   const name = card.querySelector("h2")?.textContent.trim() || "Affiliate";
@@ -1236,6 +1633,7 @@ function getAffiliationKitText(card) {
       `Lien principal: ${meta.publicLink}`,
       `Contact: ${meta.contact || "-"}`,
       `Rates: ${meta.rates || "-"}`,
+      `Booking: ${bookingSummary(meta.booking) || "-"}`,
       `Liens prives: ${meta.privateLinks?.length ? meta.privateLinks.map((entry) => `${entry.label}: ${entry.url}`).join(" | ") : "-"}`,
       `Logos: ${meta.logos.length ? meta.logos.join(" | ") : "-"}`
     ].join("\n");
@@ -1254,7 +1652,7 @@ function getAffiliationKitText(card) {
 
 function getCopyAllText(card) {
   if (isCollaboratorMode()) {
-    const { name, platform, niche, publicLink, privateLinks, contact, rates, logos } = getCardMeta(card);
+    const { name, platform, niche, publicLink, privateLinks, contact, rates, booking, logos } = getCardMeta(card);
     const tags = getCopyText(card, "tags");
     const specs = getCopyText(card, "specs");
     const caption = getCopyText(card, "caption");
@@ -1268,6 +1666,7 @@ function getCopyAllText(card) {
       .replace("{{privateLinks}}", privateLinks?.length ? privateLinks.map((entry) => `${entry.label}: ${entry.url}`).join(" | ") : "-")
       .replace("{{contact}}", contact || "-")
       .replace("{{rates}}", rates || "-")
+      .replace("{{booking}}", bookingSummary(booking) || "-")
       .replace("{{logos}}", logos.length ? logos.join(" | ") : "-")
       .replace("{{tags}}", tags)
       .replace("{{specs}}", specs)
@@ -1326,7 +1725,11 @@ function applyAccessMode() {
   document.body.classList.toggle("is-unlocked", state.isUnlocked);
   document.body.classList.toggle("is-locked", !state.isUnlocked);
   if (refs.accessStatus) {
-    refs.accessStatus.textContent = state.isUnlocked ? "Admin actif" : "";
+    if (state.authMode === "api-unavailable") {
+      refs.accessStatus.textContent = "API indisponible: lancer le serveur dev (mode API-only).";
+    } else {
+      refs.accessStatus.textContent = state.isUnlocked ? "Admin actif" : "";
+    }
   }
 }
 
@@ -1348,7 +1751,7 @@ function applyEntityMode() {
   }
   if (refs.composerSubtitle) {
     refs.composerSubtitle.textContent = isCollaborator
-      ? "Ajoute des collaborators avec lien principal public et liens prives optionnels."
+      ? "Colle un bloc brut et l'app extrait lien principal, contacts et booking quand possible."
       : "Les ajouts sont sauves localement dans ton navigateur (localStorage).";
   }
   if (refs.importTitle) {
@@ -1375,6 +1778,8 @@ function applyEntityMode() {
     ],
     "contact": "email ou @handle",
     "rates": "Tarifs / conditions",
+    "sourceNotes": "Bloc de messages brut",
+    "booking": { "dateLabel": "25th", "timeLabel": "11AM", "location": "Ritual Hotel", "note": "Confirm collab" },
     "logos": ["https://...", "https://..."],
     "fr": { "tags": "...", "specs": "...", "caption": "..." },
     "en": { "tags": "...", "specs": "...", "caption": "..." }
@@ -1401,12 +1806,19 @@ function applyEntityMode() {
   }
 }
 
-function cardMatches(card, searchTerm, platform, niche, format, tone) {
+function cardMatches(card, searchTerm, platform, niche, format, tone, options = {}) {
+  const { upcomingOnly = false, nowTimestamp = Date.now() } = options;
+
   if (state.isUnlocked) {
     if (platform !== "all" && card.dataset.platform !== platform) return false;
     if (niche !== "all" && card.dataset.niche !== niche) return false;
     if (format !== "all" && card.dataset.format !== format) return false;
     if (tone !== "all" && card.dataset.tone !== tone) return false;
+
+    if (upcomingOnly) {
+      const bookingTs = Number(card.dataset.bookingTs || "");
+      if (!Number.isFinite(bookingTs) || bookingTs < nowTimestamp) return false;
+    }
   }
 
   if (!searchTerm) return true;
@@ -1420,17 +1832,38 @@ function applyFilters() {
   const niche = refs.nicheFilter.value;
   const format = refs.formatFilter.value;
   const tone = refs.toneFilter.value;
+  const upcomingOnly = isCollaboratorMode() && Boolean(refs.upcomingBookingsToggle?.checked);
+  const nowTimestamp = Date.now();
   let visibleCount = 0;
 
   getAllCards().forEach((card) => {
-    const isVisible = cardMatches(card, searchTerm, platform, niche, format, tone);
+    const isVisible = cardMatches(card, searchTerm, platform, niche, format, tone, {
+      upcomingOnly,
+      nowTimestamp
+    });
     card.style.display = isVisible ? "grid" : "none";
     if (isVisible) visibleCount += 1;
   });
 
+  if (upcomingOnly) {
+    const visibleCards = getAllCards().filter((card) => card.style.display !== "none");
+    visibleCards
+      .sort((cardA, cardB) => {
+        const aTs = Number(cardA.dataset.bookingTs || "");
+        const bTs = Number(cardB.dataset.bookingTs || "");
+        if (!Number.isFinite(aTs)) return 1;
+        if (!Number.isFinite(bTs)) return -1;
+        return aTs - bTs;
+      })
+      .forEach((card) => refs.cardsGrid.append(card));
+  }
+
   refs.emptyState.classList.toggle("is-hidden", visibleCount !== 0);
+  state.debug.visibleCount = visibleCount;
   const noun = isCollaboratorMode() ? "collaborator" : "affiliation";
-  refs.resultsInfo.textContent = `${visibleCount} ${noun}${visibleCount > 1 ? "s" : ""} affiche${visibleCount > 1 ? "es" : "e"}`;
+  const suffix = upcomingOnly ? " (RDV a venir)" : "";
+  refs.resultsInfo.textContent = `${visibleCount} ${noun}${visibleCount > 1 ? "s" : ""} affiche${visibleCount > 1 ? "es" : "e"}${suffix}`;
+  updateDebugInfo();
 }
 
 function duplicateCard(card) {
@@ -1449,7 +1882,9 @@ function duplicateCard(card) {
 }
 
 function bindFilters() {
-  [refs.searchInput, refs.platformFilter, refs.nicheFilter, refs.formatFilter, refs.toneFilter].forEach((control) => {
+  [refs.searchInput, refs.platformFilter, refs.nicheFilter, refs.formatFilter, refs.toneFilter, refs.upcomingBookingsToggle]
+    .filter(Boolean)
+    .forEach((control) => {
     control.addEventListener("input", applyFilters);
     control.addEventListener("change", applyFilters);
   });
@@ -1665,6 +2100,15 @@ function bindEntityToggle() {
       const nextEntity = btn.dataset.entity;
       if (!nextEntity || nextEntity === state.activeEntity) return;
       state.activeEntity = nextEntity;
+
+      // Avoid carrying restrictive filters across entities (e.g. X-only collaborators hiding affiliates).
+      refs.searchInput.value = "";
+      refs.platformFilter.value = "all";
+      refs.nicheFilter.value = "all";
+      refs.formatFilter.value = "all";
+      refs.toneFilter.value = "all";
+      if (refs.upcomingBookingsToggle) refs.upcomingBookingsToggle.checked = false;
+
       state.editingAffiliateId = null;
       state.editingCollaboratorId = null;
       refs.affiliateForm.reset();
@@ -1676,6 +2120,40 @@ function bindEntityToggle() {
 }
 
 function bindComposerActions() {
+  refs.collaboratorAutoFillBtn?.addEventListener("click", () => {
+    if (!state.isUnlocked || !isCollaboratorMode()) return;
+
+    const form = refs.affiliateForm;
+    const sourceNotes = toText(form.elements.sourceNotes?.value);
+    if (!sourceNotes) {
+      setFormFeedback("Ajoute d'abord un bloc de texte a analyser.", true);
+      return;
+    }
+
+    const extracted = extractCollaboratorInsights(sourceNotes);
+    let filledCount = 0;
+    const fillIfEmpty = (fieldName, value) => {
+      const element = form.elements[fieldName];
+      if (!element || toText(element.value) || !toText(value)) return;
+      element.value = value;
+      filledCount += 1;
+    };
+
+    fillIfEmpty("publicLink", extracted.publicLink);
+    fillIfEmpty("privateLinks", extracted.privateLinks.map((entry) => entry.url).join("\n"));
+    fillIfEmpty("contact", extracted.contact);
+    fillIfEmpty("bookingDate", extracted.booking.dateLabel);
+    fillIfEmpty("bookingTime", extracted.booking.timeLabel);
+    fillIfEmpty("bookingLocation", extracted.booking.location);
+
+    if (!toText(form.elements.rates?.value) && toText(extracted.booking.note)) {
+      form.elements.rates.value = extracted.booking.note;
+      filledCount += 1;
+    }
+
+    setFormFeedback(filledCount > 0 ? `Infos auto-remplies (${filledCount} champs).` : "Aucune nouvelle info detectee a remplir.");
+  });
+
   refs.affiliateForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!state.isUnlocked) return;
@@ -1984,9 +2462,12 @@ async function init() {
     bindAccessControls();
     bindCardActions();
     bindComposerActions();
+    updateDebugInfo();
   } catch (error) {
-    refs.resultsInfo.textContent = "Erreur: impossible de charger les affiliations";
+    state.debug.initError = String(error?.message || error || "unknown init error");
+    refs.resultsInfo.textContent = "Erreur: mode API-only. Lance le serveur dev (ex: npx vercel dev).";
     refs.emptyState.classList.add("is-hidden");
+    updateDebugInfo();
   }
 }
 

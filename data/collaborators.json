@@ -25,5 +25,91 @@
 			"specs": "",
 			"caption": ""
 		}
+	},
+	{
+		"id": "samel-grabbys-abril",
+		"name": "Samel / Grabbys 22-26 Abril",
+		"platform": "instagram",
+		"niche": "lifestyle",
+		"format": "short-video",
+		"tone": "authority",
+		"publicLink": "https://x.com/SamelXXX",
+		"privateLinks": [
+			{
+				"label": "Tracking",
+				"url": "https://t.co/orJkHHJK26"
+			},
+			{
+				"label": "Telegram",
+				"url": "https://t.me/samelxxx"
+			}
+		],
+		"contact": "@SamelXXX / samubuenano@gmail.com / Telegram: @samelxxx",
+		"rates": "Grabbys 22-26 Abril",
+		"sourceNotes": "https://x.com/SamelXXX ; https://t.co/orJkHHJK26 ; t.me/samelxxx samubuenano@gmail.com\nCan you confirm our collab for the 25th at 11am? at the ritual hotel.",
+		"booking": {
+			"dateLabel": "25th",
+			"timeLabel": "11AM",
+			"location": "Ritual Hotel",
+			"note": "Can you confirm our collab for the 25th at 11am?"
+		},
+		"fr": {
+			"tags": "",
+			"specs": "",
+			"caption": ""
+		},
+		"en": {
+			"tags": "",
+			"specs": "",
+			"caption": ""
+		}
+	},
+	{
+		"id": "maxxx-magnum",
+		"name": "MaxxxMagnum",
+		"platform": "x",
+		"niche": "lifestyle",
+		"format": "short-video",
+		"tone": "authority",
+		"publicLink": "https://x.com/MaxxxMagnum",
+		"privateLinks": [
+			{
+				"label": "Linktree",
+				"url": "https://linktr.ee/maxxxmagnum"
+			},
+			{
+				"label": "Tracking",
+				"url": "https://tr.ee/po7DOupZV-"
+			},
+			{
+				"label": "OnlyFans",
+				"url": "https://onlyfans.com/maxxxmagnum"
+			},
+			{
+				"label": "JustForFans",
+				"url": "https://justfor.fans/maxxxmagnum"
+			},
+			{
+				"label": "Instagram",
+				"url": "https://www.instagram.com/htt_podcast"
+			},
+			{
+				"label": "YouTube",
+				"url": "https://www.youtube.com/channel/UCEL2RJZmM-lTSR2jsRsKV1Q"
+			}
+		],
+		"contact": "@MaxxxMagnum / @CasaMaxxx / @xxxCodyJames / @httpodcast",
+		"rates": "Owner of @CasaMaxxx and Hornier than Thou Podcast. He/Him, VERS. New Haven, CT.",
+		"sourceNotes": "@MaxxxMagnum https://x.com/MaxxxMagnum Owner of @CasaMaxxx & Hornier than Thou Podcast @xxxCodyJames He/Him | VERS | FREE PALESTINE | #BLM New Haven, CT linktr.ee/maxxxmagnum https://tr.ee/po7DOupZV- https://onlyfans.com/maxxxmagnum https://justfor.fans/maxxxmagnum @httpodcast All official links for Hornier than Thou Podcast! https://www.instagram.com/htt_podcast https://www.youtube.com/channel/UCEL2RJZmM-lTSR2jsRsKV1Q",
+		"fr": {
+			"tags": "",
+			"specs": "",
+			"caption": ""
+		},
+		"en": {
+			"tags": "",
+			"specs": "",
+			"caption": ""
+		}
 	}
 ]

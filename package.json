@@ -3,6 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "type": "commonjs",
+  "scripts": {
+    "start": "npx vercel dev"
+  },
   "dependencies": {
     "@libsql/client": "^0.15.14"
   }
