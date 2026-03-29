@@ -1,5 +1,22 @@
 [
 	{
+		"id": "wolf-rayet",
+		"name": "Wolf Rayet",
+		"platform": "twitter",
+		"niche": "lifestyle",
+		"format": "post",
+		"tone": "authority",
+		"publicLink": "https://x.com/WolfRayetXXX",
+		"privateLinks": [],
+		"contact": "@WolfRayetXXX",
+		"rates": "Grabbys, Torremolinos 🇪🇸 22-26 Apr",
+		"sourceNotes": "Grabbys Torremolinos April 22-26",
+		"booking": { "dateLabel": "", "timeLabel": "", "location": "Torremolinos", "note": "Grabbys April 22-26" },
+		"logos": [],
+		"fr": { "tags": "", "specs": "", "caption": "" },
+		"en": { "tags": "", "specs": "", "caption": "" }
+	},
+	{
 		"id": "daddy-dgb",
 		"name": "DaddyDGB",
 		"platform": "twitter",
