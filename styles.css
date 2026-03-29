@@ -434,6 +434,85 @@ textarea:focus {
   outline-offset: 3px;
 }
 
+/* --- square collaborator public card --- */
+.collaborator-card.public-card {
+  aspect-ratio: 1;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  position: relative;
+  border: none;
+}
+
+.collaborator-card.public-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.18) 55%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.collab-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #2d1f0f 0%, #1a2a26 100%);
+}
+
+.collab-bg__fallback {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #2d1f0f 0%, #1a2a26 100%);
+}
+
+.collab-bg__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.collab-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.85rem;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.collab-overlay .logo-strip {
+  gap: 0.35rem;
+}
+
+.collab-overlay .logo-chip {
+  width: 36px;
+  height: 36px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.collab-info h2 {
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.collab-info .meta {
+  color: rgba(255, 255, 255, 0.78);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  margin: 0.18rem 0 0;
+  font-size: 0.82rem;
+}
+/* --- end square card --- */
+
 .preview-shell {
   border: 1px solid #ead5b7;
   border-radius: 12px;
@@ -702,7 +781,13 @@ body.is-locked #accessStatus {
 }
 
 body.is-locked .cards-grid {
-  grid-template-columns: repeat(1, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 720px) {
+  body.is-locked .cards-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 body.is-locked .entity-toggle {
