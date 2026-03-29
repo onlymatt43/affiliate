@@ -1,5 +1,24 @@
 [
 	{
+		"id": "simple-boy",
+		"name": "Simple Boy",
+		"platform": "twitter",
+		"niche": "lifestyle",
+		"format": "post",
+		"tone": "friendly",
+		"publicLink": "https://x.com/_simpleboy95",
+		"privateLinks": [
+			{ "label": "OnlyFans", "url": "https://onlyfans.com/simpleboy95" }
+		],
+		"contact": "@_simpleboy95",
+		"rates": "20% OF / no PPV — DM for collab",
+		"sourceNotes": "20% OF / no PPV / Open mind. DM for collab.",
+		"booking": { "dateLabel": "", "timeLabel": "", "location": "", "note": "" },
+		"logos": [],
+		"fr": { "tags": "", "specs": "", "caption": "" },
+		"en": { "tags": "", "specs": "", "caption": "" }
+	},
+	{
 		"id": "ethan-duarte",
 		"name": "Ethan Duarte",
 		"platform": "twitter",
