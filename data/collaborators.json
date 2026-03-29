@@ -1,5 +1,29 @@
 [
 	{
+		"id": "ethan-duarte",
+		"name": "Ethan Duarte",
+		"platform": "twitter",
+		"niche": "lifestyle",
+		"format": "short-video",
+		"tone": "friendly",
+		"publicLink": "https://x.com/EthanDuarteof",
+		"privateLinks": [
+			{ "label": "OnlyFans", "url": "https://onlyfans.com/ethanduarteof" }
+		],
+		"contact": "@EthanDuarteof",
+		"rates": "Holanda — Grabbys April 22-26",
+		"sourceNotes": "Grabbys April 22-26. Holanda.",
+		"booking": {
+			"dateLabel": "",
+			"timeLabel": "",
+			"location": "Grabbys",
+			"note": "April 22-26"
+		},
+		"logos": [],
+		"fr": { "tags": "", "specs": "", "caption": "" },
+		"en": { "tags": "", "specs": "", "caption": "" }
+	},
+	{
 		"id": "jack-xtra",
 		"name": "Jack Xtra",
 		"platform": "twitter",
