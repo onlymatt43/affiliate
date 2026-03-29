@@ -269,50 +269,12 @@
           </div>
 
           <div class="composer-actions">
-            <button type="submit" id="submitAffiliateBtn" class="accent">Ajouter et afficher</button>
+            <button type="submit" id="submitAffiliateBtn" class="accent">Sauvegarder</button>
             <button type="button" id="cancelEditBtn" class="is-hidden">Annuler edition</button>
-            <button type="button" id="collaboratorAutoFillBtn" class="entity-collaborator-only is-hidden">Auto-remplir infos</button>
-            <label class="autosave-toggle" for="autoExportLocalToggle">
-              <input type="checkbox" id="autoExportLocalToggle" />
-              Auto-export JSON local
-            </label>
-            <button type="button" id="exportLocalBtn">Exporter mes ajouts JSON</button>
-            <button type="button" id="exportFullBtn">Exporter base + local (copie)</button>
-            <button type="button" id="downloadFullBtn">Telecharger base + local (.json)</button>
-            <button type="button" id="clearLocalBtn">Supprimer mes ajouts locaux</button>
             <span id="formFeedback" aria-live="polite"></span>
           </div>
 
-          <section class="import-box" aria-labelledby="importTitle">
-            <h3 id="importTitle">Importer des affiliates (JSON)</h3>
-            <p id="importSubtitle">Colle un tableau JSON d'affiliations puis importe en fusion ou remplacement local.</p>
-            <textarea
-              id="jsonImportInput"
-              rows="8"
-              placeholder='[
-  {
-    "name": "Nom",
-    "platform": "instagram",
-    "niche": "fitness",
-    "format": "reel",
-    "tone": "motivation",
-    "promoUrl": "https://...",
-    "promoCode": "MATT20",
-    "socialUrl": "https://...",
-    "logos": ["https://...", "https://...", "https://..."],
-    "mentions": "@onlymatt @brand",
-    "postRequirements": "...",
-    "specificities": "...",
-    "fr": { "tags": "...", "specs": "...", "caption": "..." },
-    "en": { "tags": "...", "specs": "...", "caption": "..." }
-  }
-]'
-            ></textarea>
-            <div class="composer-actions">
-              <button type="button" id="importMergeBtn">Importer (fusion)</button>
-              <button type="button" id="importReplaceBtn">Importer (remplacer local)</button>
-            </div>
-          </section>
+
         </form>
       </section>
 

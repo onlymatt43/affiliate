@@ -53,16 +53,7 @@ const refs = {
   affiliateForm: document.getElementById("affiliateForm"),
   submitAffiliateBtn: document.getElementById("submitAffiliateBtn"),
   cancelEditBtn: document.getElementById("cancelEditBtn"),
-  collaboratorAutoFillBtn: document.getElementById("collaboratorAutoFillBtn"),
-  autoExportLocalToggle: document.getElementById("autoExportLocalToggle"),
   formFeedback: document.getElementById("formFeedback"),
-  exportLocalBtn: document.getElementById("exportLocalBtn"),
-  exportFullBtn: document.getElementById("exportFullBtn"),
-  downloadFullBtn: document.getElementById("downloadFullBtn"),
-  clearLocalBtn: document.getElementById("clearLocalBtn"),
-  jsonImportInput: document.getElementById("jsonImportInput"),
-  importMergeBtn: document.getElementById("importMergeBtn"),
-  importReplaceBtn: document.getElementById("importReplaceBtn"),
   unlockInput: document.getElementById("unlockInput"),
   unlockBtn: document.getElementById("unlockBtn"),
   lockBtn: document.getElementById("lockBtn"),
@@ -1211,18 +1202,12 @@ function saveViewMode() {
 }
 
 function isAutoExportEnabled() {
-  return Boolean(refs.autoExportLocalToggle?.checked);
+  return false;
 }
 
-function loadAutoExportPreference() {
-  const stored = localStorage.getItem(AUTO_EXPORT_STORAGE_KEY);
-  const enabled = stored === "1";
-  if (refs.autoExportLocalToggle) refs.autoExportLocalToggle.checked = enabled;
-}
+function loadAutoExportPreference() {}
 
-function saveAutoExportPreference() {
-  localStorage.setItem(AUTO_EXPORT_STORAGE_KEY, isAutoExportEnabled() ? "1" : "0");
-}
+function saveAutoExportPreference() {}
 
 function autoExportLocalIfEnabled(reason) {
   if (!isAutoExportEnabled()) return;
@@ -1796,56 +1781,6 @@ function applyEntityMode() {
       ? "Colle un bloc brut et l'app extrait lien principal, contacts et booking quand possible."
       : "Les ajouts sont sauves localement dans ton navigateur (localStorage).";
   }
-  if (refs.importTitle) {
-    refs.importTitle.textContent = isCollaborator ? "Importer des collaborators (JSON)" : "Importer des affiliates (JSON)";
-  }
-  if (refs.importSubtitle) {
-    refs.importSubtitle.textContent = isCollaborator
-      ? "Colle un tableau JSON de collaborators puis importe en fusion ou remplacement local."
-      : "Colle un tableau JSON d'affiliations puis importe en fusion ou remplacement local.";
-  }
-  if (refs.jsonImportInput) {
-    refs.jsonImportInput.placeholder = isCollaborator
-      ? `[
-  {
-    "name": "Nom",
-    "platform": "instagram",
-    "niche": "business",
-    "format": "short-video",
-    "tone": "authority",
-    "publicLink": "https://...",
-    "privateLinks": [
-      { "label": "Media kit", "url": "https://..." },
-      { "label": "Drive", "url": "https://..." }
-    ],
-    "contact": "email ou @handle",
-    "rates": "Tarifs / conditions",
-    "sourceNotes": "Bloc de messages brut",
-    "booking": { "dateLabel": "25th", "timeLabel": "11AM", "location": "Ritual Hotel", "note": "Confirm collab" },
-    "logos": ["https://...", "https://..."],
-    "fr": { "tags": "...", "specs": "...", "caption": "..." },
-    "en": { "tags": "...", "specs": "...", "caption": "..." }
-  }
-]`
-      : `[
-  {
-    "name": "Nom",
-    "platform": "instagram",
-    "niche": "fitness",
-    "format": "reel",
-    "tone": "motivation",
-    "promoUrl": "https://...",
-    "promoCode": "MATT20",
-    "socialUrl": "https://...",
-    "logos": ["https://...", "https://...", "https://..."],
-    "mentions": "@onlymatt @brand",
-    "postRequirements": "...",
-    "specificities": "...",
-    "fr": { "tags": "...", "specs": "...", "caption": "..." },
-    "en": { "tags": "...", "specs": "...", "caption": "..." }
-  }
-]`;
-  }
 }
 
 function cardMatches(card, searchTerm, platform, niche, format, tone, options = {}) {
@@ -2182,40 +2117,6 @@ function bindEntityToggle() {
 }
 
 function bindComposerActions() {
-  refs.collaboratorAutoFillBtn?.addEventListener("click", () => {
-    if (!state.isUnlocked || !isCollaboratorMode()) return;
-
-    const form = refs.affiliateForm;
-    const sourceNotes = toText(form.elements.sourceNotes?.value);
-    if (!sourceNotes) {
-      setFormFeedback("Ajoute d'abord un bloc de texte a analyser.", true);
-      return;
-    }
-
-    const extracted = extractCollaboratorInsights(sourceNotes);
-    let filledCount = 0;
-    const fillIfEmpty = (fieldName, value) => {
-      const element = form.elements[fieldName];
-      if (!element || toText(element.value) || !toText(value)) return;
-      element.value = value;
-      filledCount += 1;
-    };
-
-    fillIfEmpty("publicLink", extracted.publicLink);
-    fillIfEmpty("privateLinks", extracted.privateLinks.map((entry) => entry.url).join("\n"));
-    fillIfEmpty("contact", extracted.contact);
-    fillIfEmpty("bookingDate", extracted.booking.dateLabel);
-    fillIfEmpty("bookingTime", extracted.booking.timeLabel);
-    fillIfEmpty("bookingLocation", extracted.booking.location);
-
-    if (!toText(form.elements.rates?.value) && toText(extracted.booking.note)) {
-      form.elements.rates.value = extracted.booking.note;
-      filledCount += 1;
-    }
-
-    setFormFeedback(filledCount > 0 ? `Infos auto-remplies (${filledCount} champs).` : "Aucune nouvelle info detectee a remplir.");
-  });
-
   refs.affiliateForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!state.isUnlocked) return;
@@ -2235,7 +2136,6 @@ function bindComposerActions() {
             upsertLocalCollaborator(collaborator);
             saveLocalCollaborators();
           }
-          autoExportLocalIfEnabled("modification");
           rerenderAll();
           refs.affiliateForm.reset();
           setComposerEditMode(null);
@@ -2257,7 +2157,6 @@ function bindComposerActions() {
           state.localCollaborators.push(collaborator);
           saveLocalCollaborators();
         }
-        autoExportLocalIfEnabled("ajout");
         rerenderAll();
         refs.affiliateForm.reset();
         setFormFeedback(isRemotePersistenceEnabled() ? "Collaborator ajoute. Sauve en base." : "Collaborator ajoute. Sauve localement.");
@@ -2276,7 +2175,6 @@ function bindComposerActions() {
           upsertLocalAffiliate(affiliate);
           saveLocalAffiliates();
         }
-        autoExportLocalIfEnabled("modification");
         rerenderAll();
         refs.affiliateForm.reset();
         setComposerEditMode(null);
@@ -2298,185 +2196,12 @@ function bindComposerActions() {
         state.localAffiliates.push(affiliate);
         saveLocalAffiliates();
       }
-      autoExportLocalIfEnabled("ajout");
       rerenderAll();
       refs.affiliateForm.reset();
       setFormFeedback(isRemotePersistenceEnabled() ? "Affiliation ajoutee. Sauvee en base." : "Affiliation ajoutee. Sauvee localement.");
       refs.cardsGrid.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (error) {
       setFormFeedback(error.message || "Impossible d'ajouter cette affiliation.", true);
-    }
-  });
-
-  refs.exportLocalBtn.addEventListener("click", () => {
-    if (!state.isUnlocked) return;
-    const payload = isRemotePersistenceEnabled()
-      ? getFullDataset()
-      : (isCollaboratorMode() ? state.localCollaborators : state.localAffiliates);
-    copyText(JSON.stringify(payload, null, 2))
-      .then(() => setFormFeedback(isRemotePersistenceEnabled() ? "JSON base distante copie." : "JSON des ajouts locaux copie dans le presse-papiers."))
-      .catch(() => setFormFeedback("Export impossible.", true));
-  });
-
-  refs.exportFullBtn.addEventListener("click", () => {
-    if (!state.isUnlocked) return;
-    copyText(JSON.stringify(getFullDataset(), null, 2))
-      .then(() => setFormFeedback("JSON complet (base + local) copie."))
-      .catch(() => setFormFeedback("Export complet impossible.", true));
-  });
-
-  refs.downloadFullBtn.addEventListener("click", () => {
-    if (!state.isUnlocked) return;
-    try {
-      const prefix = isCollaboratorMode() ? "collaborators" : "affiliations";
-      const filename = `${prefix}-export-${new Date().toISOString().slice(0, 10)}.json`;
-      downloadJsonFile(filename, getFullDataset());
-      setFormFeedback("Fichier JSON telecharge.");
-    } catch (error) {
-      setFormFeedback("Telechargement impossible.", true);
-    }
-  });
-
-  refs.clearLocalBtn.addEventListener("click", async () => {
-    if (!state.isUnlocked) return;
-
-    const localItems = isCollaboratorMode() ? state.localCollaborators : state.localAffiliates;
-
-    if (!isRemotePersistenceEnabled() && !localItems.length) {
-      setFormFeedback("Aucun ajout local a supprimer.");
-      return;
-    }
-
-    const confirmed = window.confirm(
-      isRemotePersistenceEnabled()
-        ? (isCollaboratorMode() ? "Supprimer tous les collaborators de la base distante?" : "Supprimer toutes les affiliations de la base distante?")
-        : (isCollaboratorMode() ? "Supprimer tous les collaborators ajoutes localement?" : "Supprimer toutes les affiliations ajoutees localement?")
-    );
-    if (!confirmed) return;
-
-    if (isRemotePersistenceEnabled()) {
-      if (isCollaboratorMode()) {
-        await remoteClearAllCollaborators();
-        await loadCollaborators();
-      } else {
-        await remoteClearAll();
-        await loadAffiliates();
-      }
-    } else {
-      if (isCollaboratorMode()) {
-        state.localCollaborators = [];
-        saveLocalCollaborators();
-      } else {
-        state.localAffiliates = [];
-        saveLocalAffiliates();
-      }
-    }
-    autoExportLocalIfEnabled("suppression");
-    rerenderAll();
-    refs.affiliateForm.reset();
-    setComposerEditMode(null);
-    setFormFeedback(isRemotePersistenceEnabled() ? "Base distante videe." : "Ajouts locaux supprimes.");
-  });
-
-  refs.importMergeBtn.addEventListener("click", async () => {
-    if (!state.isUnlocked) return;
-    try {
-      if (isCollaboratorMode()) {
-        const imported = parseImportedCollaborators(refs.jsonImportInput.value.trim());
-        const deduped = mergeUniqueCollaborators(state.collaborators, imported);
-        const additions = deduped.merged.slice(state.collaborators.length);
-
-        if (isRemotePersistenceEnabled()) {
-          await remoteBulkUpsertCollaborators(additions);
-          await loadCollaborators();
-        } else {
-          state.localCollaborators = [...state.localCollaborators, ...additions];
-          saveLocalCollaborators();
-        }
-        autoExportLocalIfEnabled("import fusion");
-        rerenderAll();
-        setComposerEditMode(null);
-        setFormFeedback(`${deduped.addedCount} ajoutee(s), ${deduped.skippedCount} doublon(s) ignores.`);
-        refs.jsonImportInput.value = "";
-        return;
-      }
-
-      const imported = parseImportedAffiliates(refs.jsonImportInput.value.trim());
-      const deduped = mergeUniqueAffiliates(state.affiliates, imported);
-      const additions = deduped.merged.slice(state.affiliates.length);
-
-      if (isRemotePersistenceEnabled()) {
-        await remoteBulkUpsert(additions);
-        await loadAffiliates();
-      } else {
-        state.localAffiliates = [...state.localAffiliates, ...additions];
-        saveLocalAffiliates();
-      }
-      autoExportLocalIfEnabled("import fusion");
-      rerenderAll();
-      setComposerEditMode(null);
-      setFormFeedback(`${deduped.addedCount} ajoutee(s), ${deduped.skippedCount} doublon(s) ignores.`);
-      refs.jsonImportInput.value = "";
-    } catch (error) {
-      setFormFeedback(error.message || "Import fusion impossible.", true);
-    }
-  });
-
-  refs.importReplaceBtn.addEventListener("click", async () => {
-    if (!state.isUnlocked) return;
-    try {
-      if (isCollaboratorMode()) {
-        const imported = parseImportedCollaborators(refs.jsonImportInput.value.trim());
-
-        if (isRemotePersistenceEnabled()) {
-          const dedupedRemote = mergeUniqueCollaborators([], imported);
-          await remoteReplaceAllCollaborators(dedupedRemote.merged);
-          await loadCollaborators();
-          autoExportLocalIfEnabled("import remplacement");
-          rerenderAll();
-          setComposerEditMode(null);
-          setFormFeedback(`${dedupedRemote.merged.length} en base distante.`);
-          refs.jsonImportInput.value = "";
-          return;
-        }
-
-        const deduped = mergeUniqueCollaborators(state.baseCollaborators, imported);
-        const keptLocal = deduped.merged.slice(state.baseCollaborators.length);
-        state.localCollaborators = keptLocal;
-        saveLocalCollaborators();
-        autoExportLocalIfEnabled("import remplacement");
-        rerenderAll();
-        setComposerEditMode(null);
-        setFormFeedback(`${keptLocal.length} local(s) gardes, ${deduped.skippedCount} doublon(s) ignores.`);
-        refs.jsonImportInput.value = "";
-        return;
-      }
-
-      const imported = parseImportedAffiliates(refs.jsonImportInput.value.trim());
-
-      if (isRemotePersistenceEnabled()) {
-        const dedupedRemote = mergeUniqueAffiliates([], imported);
-        await remoteReplaceAll(dedupedRemote.merged);
-        await loadAffiliates();
-        autoExportLocalIfEnabled("import remplacement");
-        rerenderAll();
-        setComposerEditMode(null);
-        setFormFeedback(`${dedupedRemote.merged.length} en base distante.`);
-        refs.jsonImportInput.value = "";
-        return;
-      }
-
-      const deduped = mergeUniqueAffiliates(state.baseAffiliates, imported);
-      const keptLocal = deduped.merged.slice(state.baseAffiliates.length);
-      state.localAffiliates = keptLocal;
-      saveLocalAffiliates();
-      autoExportLocalIfEnabled("import remplacement");
-      rerenderAll();
-      setComposerEditMode(null);
-      setFormFeedback(`${keptLocal.length} local(s) gardes, ${deduped.skippedCount} doublon(s) ignores.`);
-      refs.jsonImportInput.value = "";
-    } catch (error) {
-      setFormFeedback(error.message || "Import remplacement impossible.", true);
     }
   });
 
@@ -2487,13 +2212,6 @@ function bindComposerActions() {
     setComposerEditMode(null);
     setFormFeedback("Edition annulee.");
   });
-
-  if (refs.autoExportLocalToggle) {
-    refs.autoExportLocalToggle.addEventListener("change", () => {
-      saveAutoExportPreference();
-      setFormFeedback(isAutoExportEnabled() ? "Auto-export active." : "Auto-export desactive.");
-    });
-  }
 }
 
 async function init() {
@@ -2507,7 +2225,6 @@ async function init() {
       loadLocalCollaborators();
     }
     loadViewMode();
-    loadAutoExportPreference();
     await fetchSession();
     applyAccessMode();
     applyEntityMode();
