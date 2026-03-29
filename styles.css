@@ -548,6 +548,8 @@ textarea:focus {
   flex-direction: column;
   gap: 0.28rem;
   overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .collab-panel__link {
@@ -562,6 +564,7 @@ textarea:focus {
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.08);
   transition: background 120ms;
+  flex-shrink: 0;
 }
 
 .collab-panel__link:hover {
@@ -569,38 +572,24 @@ textarea:focus {
   text-decoration: underline;
 }
 
-.collab-panel__contact {
-  margin-top: auto;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.collab-panel__contact-text {
-  color: rgba(255, 255, 255, 0.7);
+.collab-panel__copy-row {
+  color: rgba(255, 255, 255, 0.6);
   font-size: 0.78rem;
-  flex: 1;
+  padding: 0.26rem 0.5rem;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.collab-panel__copy-btn {
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border-radius: 7px;
-  padding: 0.24rem 0.52rem;
-  font-size: 0.74rem;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
   transition: background 120ms;
-  font-family: inherit;
+  user-select: none;
+  flex-shrink: 0;
 }
 
-.collab-panel__copy-btn:hover {
-  background: rgba(255, 255, 255, 0.22);
+.collab-panel__copy-row:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
 }
 /* --- end square card --- */
 

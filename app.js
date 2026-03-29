@@ -740,10 +740,7 @@ function collaboratorPublicCardMarkup(item, platformLabel, nicheLabel) {
     .join("");
 
   const contactMarkup = item.contact
-    ? `<div class="collab-panel__contact">
-          <span class="collab-panel__contact-text">${escapeHtml(item.contact)}</span>
-          <button type="button" class="collab-panel__copy-btn" data-action="copy-contact-inline" data-copy-value="${escapeHtml(item.contact)}">Copier</button>
-        </div>`
+    ? `<div class="collab-panel__copy-row" data-action="copy-contact-inline" data-copy-value="${escapeHtml(item.contact)}" title="Cliquer pour copier">${escapeHtml(item.contact)}</div>`
     : "";
 
   return `
