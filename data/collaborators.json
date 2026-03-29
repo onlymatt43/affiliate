@@ -1,5 +1,32 @@
 [
 	{
+		"id": "jack-xtra",
+		"name": "Jack Xtra",
+		"platform": "twitter",
+		"niche": "lifestyle",
+		"format": "short-video",
+		"tone": "authority",
+		"publicLink": "https://x.com/Jackxtraxxxx",
+		"privateLinks": [
+			{ "label": "Telegram", "url": "https://t.me/+8bI-WllVsJEwNTU8" },
+			{ "label": "OnlyFans", "url": "https://onlyfans.com/jackxtra" },
+			{ "label": "JustForFans", "url": "https://justfor.fans/jackxtra" },
+			{ "label": "Instagram", "url": "https://instagram.com/jackxtrafan" }
+		],
+		"contact": "@Jackxtraxxxx",
+		"rates": "Puerto Vallarta, Jalisco MX — 10x Grabby Award Nominado",
+		"sourceNotes": "Puerto Vallarta MX. 10 x GRABBY AWARD NOMINADO",
+		"booking": {
+			"dateLabel": "",
+			"timeLabel": "",
+			"location": "Puerto Vallarta",
+			"note": ""
+		},
+		"logos": [],
+		"fr": { "tags": "", "specs": "", "caption": "" },
+		"en": { "tags": "", "specs": "", "caption": "" }
+	},
+	{
 		"id": "dom-llamas",
 		"name": "Dom Llamas (121K)",
 		"platform": "instagram",
