@@ -1,5 +1,25 @@
 [
 	{
+		"id": "daddy-dgb",
+		"name": "DaddyDGB",
+		"platform": "twitter",
+		"niche": "lifestyle",
+		"format": "post",
+		"tone": "authority",
+		"publicLink": "https://x.com/DaddyDGB",
+		"privateLinks": [
+			{ "label": "Site", "url": "https://danielgainsbrook.com" },
+			{ "label": "Linktree", "url": "https://linktr.ee/danielgbrook" }
+		],
+		"contact": "@DaddyDGB",
+		"rates": "",
+		"sourceNotes": "",
+		"booking": { "dateLabel": "", "timeLabel": "", "location": "", "note": "" },
+		"logos": [],
+		"fr": { "tags": "", "specs": "", "caption": "" },
+		"en": { "tags": "", "specs": "", "caption": "" }
+	},
+	{
 		"id": "simple-boy",
 		"name": "Simple Boy",
 		"platform": "twitter",
