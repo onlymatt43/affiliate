@@ -511,6 +511,97 @@ textarea:focus {
   margin: 0.18rem 0 0;
   font-size: 0.82rem;
 }
+
+.collab-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: var(--radius);
+  background: rgba(10, 6, 2, 0.88);
+  backdrop-filter: blur(3px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 1rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.collaborator-card.public-card:hover .collab-panel,
+.collaborator-card.public-card.is-panel-open .collab-panel {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.collab-panel__name {
+  color: #fff;
+  font-family: "Space Grotesk", "Futura", sans-serif;
+  font-size: 0.96rem;
+  font-weight: 700;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+  margin-bottom: 0.1rem;
+}
+
+.collab-panel__links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  overflow-y: auto;
+}
+
+.collab-panel__link {
+  color: #a6ede4;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0.26rem 0.5rem;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  transition: background 120ms;
+}
+
+.collab-panel__link:hover {
+  background: rgba(255, 255, 255, 0.18);
+  text-decoration: underline;
+}
+
+.collab-panel__contact {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.collab-panel__contact-text {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.78rem;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collab-panel__copy-btn {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 7px;
+  padding: 0.24rem 0.52rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 120ms;
+  font-family: inherit;
+}
+
+.collab-panel__copy-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
 /* --- end square card --- */
 
 .preview-shell {

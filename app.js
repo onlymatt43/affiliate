@@ -724,14 +724,34 @@ function privateCardMarkup(item, platformLabel, nicheLabel) {
 }
 
 function collaboratorPublicCardMarkup(item, platformLabel, nicheLabel) {
+  const allLinks = [];
+  if (item.publicLink) {
+    let display = item.publicLink;
+    try {
+      const u = new URL(item.publicLink);
+      display = u.hostname.replace(/^www\./, "") + u.pathname.replace(/\/$/, "");
+    } catch (_) {}
+    allLinks.push({ label: display, url: item.publicLink });
+  }
+  (item.privateLinks || []).forEach((pl) => allLinks.push(pl));
+
+  const linksMarkup = allLinks
+    .map((l) => `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener noreferrer" class="collab-panel__link">${escapeHtml(l.label || l.url)}</a>`)
+    .join("");
+
+  const contactMarkup = item.contact
+    ? `<div class="collab-panel__contact">
+          <span class="collab-panel__contact-text">${escapeHtml(item.contact)}</span>
+          <button type="button" class="collab-panel__copy-btn" data-action="copy-contact-inline" data-copy-value="${escapeHtml(item.contact)}">Copier</button>
+        </div>`
+    : "";
+
   return `
     <article
-      class="affiliate-card collaborator-card public-card is-clickable"
+      class="affiliate-card collaborator-card public-card"
       data-id="${escapeHtml(item.id)}"
       data-public-link="${escapeHtml(item.publicLink)}"
-      tabindex="0"
-      role="link"
-      aria-label="Ouvrir le lien principal de ${escapeHtml(item.name)}">
+      tabindex="0">
       <div class="collab-bg">
         <div class="collab-bg__fallback" data-preview-fallback="${escapeHtml(item.id)}"></div>
         <img class="collab-bg__img is-hidden" data-preview-image="${escapeHtml(item.id)}" alt="" loading="lazy" />
@@ -742,6 +762,11 @@ function collaboratorPublicCardMarkup(item, platformLabel, nicheLabel) {
           <h2>${escapeHtml(item.name)}</h2>
           <p class="meta">${escapeHtml(platformLabel)} · ${escapeHtml(nicheLabel)}</p>
         </div>
+      </div>
+      <div class="collab-panel">
+        <div class="collab-panel__name">${escapeHtml(item.name)}</div>
+        <div class="collab-panel__links">${linksMarkup}</div>
+        ${contactMarkup}
       </div>
     </article>
   `;
@@ -1982,10 +2007,21 @@ function bindCardActions() {
   refs.cardsGrid.addEventListener("click", async (event) => {
     if (!state.isUnlocked) {
       if (isCollaboratorMode()) {
-        const card = event.target.closest(".collaborator-card.is-clickable");
-        const link = card?.dataset.publicLink;
-        if (card && link) {
-          window.open(link, "_blank", "noopener,noreferrer");
+        const copyBtn = event.target.closest("[data-action='copy-contact-inline']");
+        if (copyBtn) {
+          copyText(copyBtn.dataset.copyValue || "").then(() => {
+            const orig = copyBtn.textContent;
+            copyBtn.textContent = "Copie !";
+            setTimeout(() => { copyBtn.textContent = orig; }, 1500);
+          });
+          return;
+        }
+
+        const card = event.target.closest(".collaborator-card.public-card");
+        if (card && !event.target.closest(".collab-panel__link")) {
+          const isOpen = card.classList.contains("is-panel-open");
+          refs.cardsGrid.querySelectorAll(".collaborator-card.public-card.is-panel-open").forEach((c) => c.classList.remove("is-panel-open"));
+          if (!isOpen) card.classList.add("is-panel-open");
         }
       }
       return;
@@ -2103,14 +2139,23 @@ function bindCardActions() {
 
   refs.cardsGrid.addEventListener("keydown", (event) => {
     if (state.isUnlocked || !isCollaboratorMode()) return;
-    if (event.key !== "Enter" && event.key !== " ") return;
+    const card = event.target.closest(".collaborator-card.public-card");
+    if (!card) return;
 
-    const card = event.target.closest(".collaborator-card.is-clickable");
-    const link = card?.dataset.publicLink;
-    if (!card || !link) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      const isOpen = card.classList.contains("is-panel-open");
+      refs.cardsGrid.querySelectorAll(".collaborator-card.public-card.is-panel-open").forEach((c) => c.classList.remove("is-panel-open"));
+      if (!isOpen) card.classList.add("is-panel-open");
+    } else if (event.key === "Escape") {
+      card.classList.remove("is-panel-open");
+    }
+  });
 
-    event.preventDefault();
-    window.open(link, "_blank", "noopener,noreferrer");
+  document.addEventListener("click", (event) => {
+    if (state.isUnlocked || !isCollaboratorMode()) return;
+    if (event.target.closest(".collaborator-card.public-card")) return;
+    refs.cardsGrid.querySelectorAll(".collaborator-card.public-card.is-panel-open").forEach((c) => c.classList.remove("is-panel-open"));
   });
 }
 
