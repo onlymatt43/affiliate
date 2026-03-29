@@ -897,6 +897,27 @@ async function fetchLinkMeta(url) {
   }
 }
 
+function socialAvatarUrl(profileUrl) {
+  try {
+    const parsed = new URL(profileUrl);
+    const hostname = parsed.hostname.replace(/^www\./, "").toLowerCase();
+    const username = parsed.pathname.split("/").filter(Boolean)[0];
+    if (!username) return "";
+    if (hostname === "x.com" || hostname === "twitter.com") {
+      return `https://unavatar.io/x/${encodeURIComponent(username)}`;
+    }
+    if (hostname === "instagram.com") {
+      return `https://unavatar.io/instagram/${encodeURIComponent(username)}`;
+    }
+    if (hostname === "tiktok.com") {
+      return `https://unavatar.io/tiktok/${encodeURIComponent(username)}`;
+    }
+  } catch (error) {
+    // ignore
+  }
+  return "";
+}
+
 async function hydrateCardPreviews(cards, urlField) {
   await Promise.all(
     cards.map(async (card) => {
@@ -905,12 +926,14 @@ async function hydrateCardPreviews(cards, urlField) {
       if (!id || !url) return;
 
       const meta = await fetchLinkMeta(url);
-      if (!meta.image) return;
+      let imageUrl = meta.image;
+      if (!imageUrl) imageUrl = socialAvatarUrl(url);
+      if (!imageUrl) return;
 
       const img = refs.cardsGrid.querySelector(`[data-preview-image="${CSS.escape(id)}"]`);
       const fallback = refs.cardsGrid.querySelector(`[data-preview-fallback="${CSS.escape(id)}"]`);
       if (!img) return;
-      img.src = meta.image;
+      img.src = imageUrl;
       img.classList.remove("is-hidden");
       if (fallback) fallback.classList.add("is-hidden");
     })
@@ -919,9 +942,8 @@ async function hydrateCardPreviews(cards, urlField) {
 
 async function hydratePublicPreviews() {
   if (state.isUnlocked) return;
-  const cards = Array.from(refs.cardsGrid.querySelectorAll(".public-card"));
+  const cards = Array.from(refs.cardsGrid.querySelectorAll(".public-card:not(.collaborator-card)"));
   await hydrateCardPreviews(cards, "promoUrl");
-  // collaborator public cards use publicLink
   const collabCards = Array.from(refs.cardsGrid.querySelectorAll(".collaborator-card.public-card"));
   await hydrateCardPreviews(collabCards, "publicLink");
 }
