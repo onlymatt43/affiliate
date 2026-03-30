@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy | Affiliate Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      .legal-page { max-width: 700px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }
+      .legal-page h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+      .legal-page .subtitle { color: var(--muted, #888); margin-bottom: 2.5rem; font-size: 0.9rem; }
+      .legal-page h2 { font-size: 1.1rem; margin-top: 2rem; margin-bottom: 0.4rem; }
+      .legal-page p, .legal-page li { line-height: 1.7; color: var(--text-secondary, #ccc); font-size: 0.95rem; }
+      .legal-page ul { padding-left: 1.25rem; margin-top: 0.4rem; }
+      .legal-page a.back { display: inline-block; margin-bottom: 2rem; font-size: 0.85rem; opacity: 0.6; text-decoration: none; }
+      .legal-page a.back:hover { opacity: 1; }
+    </style>
+  </head>
+  <body>
+    <div class="bg-orb orb-a" aria-hidden="true"></div>
+    <div class="bg-orb orb-b" aria-hidden="true"></div>
+    <div class="legal-page">
+      <a class="back" href="/">&larr; Back</a>
+      <p class="eyebrow">onlymatt</p>
+      <h1>Privacy Policy</h1>
+      <p class="subtitle">Last updated: March 30, 2026</p>
+
+      <h2>1. Who we are</h2>
+      <p>This policy applies to <strong>affiliates.onlymatt.ca</strong>, operated by onlymatt. It explains what data we collect, how we use it, and your rights.</p>
+
+      <h2>2. Data we collect</h2>
+      <ul>
+        <li><strong>Twitter / X username</strong> — collected temporarily during the OAuth flow solely to verify your identity against your collaborator profile. It is not stored after authentication.</li>
+        <li><strong>Collaborator profile data</strong> — name, public social link, booking information, and private contact details (email, contact handle) that you or the operator enter into the application. Stored in a private database (Turso / libSQL).</li>
+        <li><strong>Session data</strong> — a short-lived browser session (sessionStorage) records which cards you have unlocked during your current visit. This data never leaves your browser.</li>
+      </ul>
+
+      <h2>3. How we use your data</h2>
+      <ul>
+        <li>To verify your identity when unlocking your private collaborator card.</li>
+        <li>To display your booking and contact information to the operator only.</li>
+        <li>Private email addresses are never returned in public API responses.</li>
+      </ul>
+
+      <h2>4. Data sharing</h2>
+      <p>We do not sell, rent, or share your personal data with third parties, except:</p>
+      <ul>
+        <li><strong>Twitter / X</strong> — to perform the OAuth 2.0 identity check. Governed by <a href="https://twitter.com/en/privacy" target="_blank" rel="noopener noreferrer">X's Privacy Policy</a>.</li>
+        <li><strong>Vercel</strong> — hosting provider. May process request logs in accordance with <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer">Vercel's Privacy Policy</a>.</li>
+        <li><strong>Turso</strong> — database provider. Data is stored encrypted at rest.</li>
+      </ul>
+
+      <h2>5. Data retention</h2>
+      <p>Collaborator profile data is retained until explicitly deleted by the operator. Authentication tokens used during the OAuth flow expire within 10 minutes and are discarded immediately after use.</p>
+
+      <h2>6. Your rights</h2>
+      <p>You may request access to, correction of, or deletion of your personal data at any time by contacting the operator.</p>
+
+      <h2>7. Cookies</h2>
+      <p>During the Twitter OAuth flow we set three short-lived HttpOnly cookies (<code>tw_cv</code>, <code>tw_state</code>, <code>tw_collab</code>) to secure the authentication process. They expire in 10 minutes and are deleted as soon as the flow completes. No tracking or advertising cookies are used.</p>
+
+      <h2>8. Changes</h2>
+      <p>This policy may be updated at any time. The date at the top of this page indicates when it was last revised.</p>
+
+      <h2>9. Contact</h2>
+      <p>Questions about your data? Reach out via <a href="https://x.com/onlymatt43" target="_blank" rel="noopener noreferrer">@onlymatt43 on X</a>.</p>
+    </div>
+  </body>
+</html>
