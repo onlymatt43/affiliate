@@ -385,6 +385,11 @@ function addUnlockedId(id) {
   }
 }
 
+function removeUnlockedId(id) {
+  const ids = getUnlockedIds().filter((i) => i !== id);
+  sessionStorage.setItem(UNLOCKED_COLLAB_KEY, JSON.stringify(ids));
+}
+
 async function swapCardToPrivate(collabId) {
   const card = document.querySelector(`[data-collab-id="${CSS.escape(collabId)}"]`);
   if (!card) return;
@@ -398,8 +403,9 @@ async function swapCardToPrivate(collabId) {
   } catch (_) {}
 
   if (!collab) {
-    card.classList.add("auth-shake");
-    setTimeout(() => card.classList.remove("auth-shake"), 700);
+    // Token absent or expired — remove from sessionStorage and re-show auth overlay
+    removeUnlockedId(collabId);
+    showAuthOverlay(card, collabId);
     return;
   }
 
@@ -416,7 +422,7 @@ async function swapCardToPrivate(collabId) {
   }
 }
 
-function showAuthOverlay(card, collabId) {
+function showAuthOverlay(card, collabId, errorMsg = null) {
   // Dismiss any existing overlay
   document.querySelectorAll(".collab-auth-overlay").forEach((el) => el.remove());
 
@@ -432,6 +438,7 @@ function showAuthOverlay(card, collabId) {
   overlay.setAttribute("aria-modal", "true");
   overlay.innerHTML = `
     <button type="button" class="collab-auth-overlay__close" aria-label="Fermer">&times;</button>
+    ${errorMsg ? `<p class="collab-auth-overlay__error">${errorMsg}</p>` : ""}
     <a
       class="collab-auth-overlay__btn"
       href="/api/auth/twitter/init?id=${encodeURIComponent(collabId)}"
@@ -474,11 +481,22 @@ function handleUnlockedParam() {
   }
 
   if (authError && errorId) {
+    if (state.activeEntity !== "collaborators") {
+      state.activeEntity = "collaborators";
+      applyEntityMode();
+      mergeCollaborators();
+      renderCards();
+      applyFilters();
+    }
     setTimeout(() => {
       const card = document.querySelector(`[data-collab-id="${CSS.escape(errorId)}"]`);
       if (!card) return;
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
       card.classList.add("auth-shake");
-      setTimeout(() => card.classList.remove("auth-shake"), 700);
+      setTimeout(() => {
+        card.classList.remove("auth-shake");
+        showAuthOverlay(card, errorId, "Ce compte X ne correspond pas à ce créateur. Connecte-toi avec le bon compte.");
+      }, 700);
     }, 300);
   }
 }
