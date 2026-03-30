@@ -1265,6 +1265,7 @@ function populateFormFromCollaborator(collaborator) {
   form.elements.publicLink.value = collaborator.publicLink || "";
   form.elements.privateLinks.value = (collaborator.privateLinks || []).map((entry) => entry.url).join("\n");
   form.elements.contact.value = collaborator.contact || "";
+  form.elements.email.value = collaborator.email || "";
   form.elements.rates.value = collaborator.rates || "";
   form.elements.sourceNotes.value = collaborator.sourceNotes || "";
   form.elements.bookingDate.value = collaborator.booking?.dateLabel || "";
@@ -1590,6 +1591,7 @@ function buildCollaboratorFromForm(formData) {
     publicLink,
     privateLinks: privateLinksRaw,
     contact: toText(formData.get("contact")) || extracted.contact,
+    email: toText(formData.get("email")),
     rates: toText(formData.get("rates")),
     sourceNotes,
     booking: {
