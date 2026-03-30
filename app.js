@@ -766,7 +766,6 @@ function collaboratorPublicCardMarkup(item, platformLabel, nicheLabel) {
         ${logoStripMarkup(item.logos, item.name)}
         <div class="collab-info">
           <h2>${escapeHtml(item.name)}</h2>
-          <p class="meta">${escapeHtml(platformLabel)} · ${escapeHtml(nicheLabel)}</p>
         </div>
       </div>
       <div class="collab-panel">
