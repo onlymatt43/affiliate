@@ -2117,6 +2117,30 @@ function bindEntityToggle() {
 }
 
 function bindComposerActions() {
+  const fSourceNotes = document.getElementById("fSourceNotes");
+  if (fSourceNotes) {
+    fSourceNotes.addEventListener("blur", () => {
+      if (!isCollaboratorMode()) return;
+      const source = fSourceNotes.value.trim();
+      if (!source) return;
+      const extracted = extractCollaboratorInsights(source);
+
+      const fPublicLink = document.getElementById("fPublicLink");
+      const fPrivateLinks = document.getElementById("fPrivateLinks");
+      const fContact = document.getElementById("fContact");
+      const fBookingDate = document.getElementById("fBookingDate");
+      const fBookingTime = document.getElementById("fBookingTime");
+      const fBookingLocation = document.getElementById("fBookingLocation");
+
+      if (fPublicLink && !fPublicLink.value && extracted.publicLink) fPublicLink.value = extracted.publicLink;
+      if (fPrivateLinks && !fPrivateLinks.value && extracted.privateLinks.length) fPrivateLinks.value = extracted.privateLinks.map((e) => e.url).join("\n");
+      if (fContact && !fContact.value && extracted.contact) fContact.value = extracted.contact;
+      if (fBookingDate && !fBookingDate.value && extracted.booking.dateLabel) fBookingDate.value = extracted.booking.dateLabel;
+      if (fBookingTime && !fBookingTime.value && extracted.booking.timeLabel) fBookingTime.value = extracted.booking.timeLabel;
+      if (fBookingLocation && !fBookingLocation.value && extracted.booking.location) fBookingLocation.value = extracted.booking.location;
+    });
+  }
+
   refs.affiliateForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!state.isUnlocked) return;
