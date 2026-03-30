@@ -1712,7 +1712,6 @@ function rerenderAll() {
   applyLanguage();
   applyViewMode();
   applyFilters();
-  renderBookingTimeline();
 }
 
 function getAllCards() {
@@ -1928,8 +1927,6 @@ function applyEntityMode() {
       ? "Colle un bloc brut et l'app extrait lien principal, contacts et booking quand possible."
       : "Les ajouts sont sauves localement dans ton navigateur (localStorage).";
   }
-
-  renderBookingTimeline();
 }
 
 function cardMatches(card, searchTerm, platform, niche, format, tone, options = {}) {
@@ -1980,6 +1977,21 @@ function applyFilters() {
         if (!Number.isFinite(aTs)) return 1;
         if (!Number.isFinite(bTs)) return -1;
         return aTs - bTs;
+      })
+      .forEach((card) => refs.cardsGrid.append(card));
+  } else if (isCollaboratorMode()) {
+    const now = Date.now();
+    const visibleCards = getAllCards().filter((card) => card.style.display !== "none");
+    visibleCards
+      .sort((cardA, cardB) => {
+        const aTs = Number(cardA.dataset.bookingTs || "");
+        const bTs = Number(cardB.dataset.bookingTs || "");
+        const aFuture = Number.isFinite(aTs) && aTs > now;
+        const bFuture = Number.isFinite(bTs) && bTs > now;
+        if (aFuture && !bFuture) return -1;
+        if (!aFuture && bFuture) return 1;
+        if (aFuture && bFuture) return aTs - bTs;
+        return 0;
       })
       .forEach((card) => refs.cardsGrid.append(card));
   }
