@@ -298,7 +298,7 @@ function getConflicts(collaborators) {
 }
 
 function shareCollaborator(id, name) {
-  const url = `${location.origin}${location.pathname}?share=${encodeURIComponent(id)}`;
+  const url = `${location.origin}/rv/${encodeURIComponent(id)}`;
   const title = name ? `RV · ${name}` : "Rendez-vous";
   if (navigator.share) {
     navigator.share({ title, url }).catch(() => {});

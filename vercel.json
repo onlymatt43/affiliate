@@ -2,6 +2,7 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
+    { "source": "/rv/:id", "destination": "/api/share?id=:id" },
     { "source": "/api/affiliates-upsert", "destination": "/api/affiliates?op=upsert" },
     { "source": "/api/affiliates-bulk-upsert", "destination": "/api/affiliates?op=bulk-upsert" },
     { "source": "/api/affiliates-replace", "destination": "/api/affiliates?op=replace" },
