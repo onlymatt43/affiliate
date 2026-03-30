@@ -863,6 +863,7 @@ function collaboratorPublicCardMarkup(item, platformLabel, nicheLabel) {
 
   const bookingBadgeText = bookingSummary(item.booking);
   const bookingBadge = bookingBadgeText ? `<span class="booking-badge">${escapeHtml(bookingBadgeText)}</span>` : "";
+  const bookingTs = getBookingTimestamp(item);
 
   return `
     <article
@@ -870,6 +871,7 @@ function collaboratorPublicCardMarkup(item, platformLabel, nicheLabel) {
       data-id="${escapeHtml(item.id)}"
       data-collab-id="${escapeHtml(item.id)}"
       data-public-link="${escapeHtml(item.publicLink)}"
+      data-booking-ts="${bookingTs || ""}"
       tabindex="0">
       ${bookingBadge}
       <div class="collab-bg">
