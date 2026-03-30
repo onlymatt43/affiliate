@@ -1,4 +1,5 @@
 const { listCollaborators } = require("../../../lib/collaborators-store");
+const { signToken } = require("../../../lib/collab-token");
 
 function parseCookies(header) {
   const out = {};
@@ -108,6 +109,10 @@ module.exports = async function handler(req, res) {
   res.setHeader("Set-Cookie", clearCookies());
 
   if (matched) {
+    let token = "";
+    try { token = signToken(collabId); } catch (_) {}
+    const tokenCookie = "collab_token=" + encodeURIComponent(token) + "; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax; Secure";
+    res.setHeader("Set-Cookie", [tokenCookie]);
     res.redirect(302, appBase + "/?unlocked=" + encodeURIComponent(collabId));
   } else {
     res.redirect(302, appBase + "/?auth_error=1&id=" + encodeURIComponent(collabId));

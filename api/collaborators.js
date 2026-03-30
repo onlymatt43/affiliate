@@ -7,6 +7,19 @@ const {
 } = require("../lib/collaborators-store");
 const { isAuthenticated } = require("../lib/auth");
 
+const PUBLIC_FIELDS = new Set(["id", "name", "publicLink", "publicLinks", "logos", "contact", "platform"]);
+
+function toPublicShape(collab) {
+  const out = {};
+  for (const key of PUBLIC_FIELDS) {
+    if (key in collab) out[key] = collab[key];
+  }
+  // Expose only dateLabel + timeLabel for booking badge / sort — not location or note
+  const b = collab.booking || {};
+  out.booking = { dateLabel: b.dateLabel || "", timeLabel: b.timeLabel || "" };
+  return out;
+}
+
 function getOp(req) {
   const raw = req.query?.op;
   if (Array.isArray(raw)) return String(raw[0] || "");
@@ -20,10 +33,9 @@ module.exports = async function handler(req, res) {
     try {
       const payload = await listCollaborators();
       const isAdmin = isAuthenticated(req);
-      // Strip private email from public responses
       const collaborators = isAdmin
         ? payload.collaborators
-        : payload.collaborators.map(({ email: _email, ...rest }) => rest);
+        : payload.collaborators.map(toPublicShape);
       res.status(200).json({
         ok: true,
         collaborators,

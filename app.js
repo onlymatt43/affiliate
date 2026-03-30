@@ -385,11 +385,24 @@ function addUnlockedId(id) {
   }
 }
 
-function swapCardToPrivate(collabId) {
+async function swapCardToPrivate(collabId) {
   const card = document.querySelector(`[data-collab-id="${CSS.escape(collabId)}"]`);
   if (!card) return;
-  const collab = findCollaboratorById(collabId);
-  if (!collab) return;
+
+  let collab = null;
+  try {
+    const res = await fetch("/api/collaborators/private?id=" + encodeURIComponent(collabId), { credentials: "include" });
+    if (!res.ok) throw new Error("unauthorized");
+    const data = await res.json();
+    collab = data.collaborator || null;
+  } catch (_) {}
+
+  if (!collab) {
+    card.classList.add("auth-shake");
+    setTimeout(() => card.classList.remove("auth-shake"), 700);
+    return;
+  }
+
   const platformLabel = PLATFORM_LABELS[collab.platform] || collab.platform;
   const nicheLabel = NICHE_LABELS[collab.niche] || collab.niche;
   const privateMarkup = collaboratorPrivateCardMarkup(collab, platformLabel, nicheLabel);
@@ -956,7 +969,8 @@ function collaboratorPublicCardMarkup(item, platformLabel, nicheLabel) {
     } catch (_) {}
     allLinks.push({ label: display, url: item.publicLink });
   }
-  (item.privateLinks || []).forEach((pl) => allLinks.push(pl));
+  // publicLinks are visible without auth; privateLinks are not shown here
+  (item.publicLinks || []).forEach((pl) => allLinks.push(pl));
 
   const linksMarkup = allLinks
     .map((l) => `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener noreferrer" class="collab-panel__link">${escapeHtml(l.label || l.url)}</a>`)
@@ -1368,6 +1382,7 @@ function populateFormFromCollaborator(collaborator) {
   const form = refs.affiliateForm;
   form.elements.name.value = collaborator.name || "";
   form.elements.publicLink.value = collaborator.publicLink || "";
+  form.elements.publicLinks.value = (collaborator.publicLinks || []).map((entry) => entry.url).join("\n");
   form.elements.privateLinks.value = (collaborator.privateLinks || []).map((entry) => entry.url).join("\n");
   form.elements.contact.value = collaborator.contact || "";
   form.elements.email.value = collaborator.email || "";
@@ -1694,6 +1709,7 @@ function buildCollaboratorFromForm(formData) {
     format: toText(formData.get("format")),
     tone: toText(formData.get("tone")),
     publicLink,
+    publicLinks: toText(formData.get("publicLinks")),
     privateLinks: privateLinksRaw,
     contact: toText(formData.get("contact")) || extracted.contact,
     email: toText(formData.get("email")),
