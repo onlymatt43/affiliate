@@ -378,6 +378,45 @@ textarea:focus {
   color: #41505b;
 }
 
+.quick-add-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.2rem;
+}
+
+.quick-add-bar button {
+  border: 1px solid #cbaf8a;
+  background: #fff7ec;
+  border-radius: 11px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+
+.quick-add-bar button.is-active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.composer-form.is-quick-add .composer-grid label:not(.quick-add-field) {
+  display: none !important;
+}
+
+.composer-form.is-quick-add .composer-grid--2 {
+  display: none;
+}
+
+.composer-form.is-quick-add .quick-add-field {
+  display: grid !important;
+}
+
+.composer-form.is-quick-add #fSourceNotes {
+  min-height: 160px;
+}
+
 .autosave-toggle input {
   width: 1rem;
   height: 1rem;

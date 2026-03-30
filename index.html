@@ -115,8 +115,11 @@
         </div>
 
         <form id="affiliateForm" class="composer-form">
+          <div class="quick-add-bar entity-collaborator-only is-hidden">
+            <button type="button" id="quickAddToggle">⚡ Mode rapide</button>
+          </div>
           <div class="composer-grid">
-            <label>
+            <label class="quick-add-field">
               Nom
               <input id="fName" name="name" type="text" />
             </label>
@@ -151,7 +154,7 @@
               <input id="fContact" name="contact" type="text" placeholder="email ou @handle" />
             </label>
 
-            <label class="entity-collaborator-only is-hidden">
+            <label class="entity-collaborator-only is-hidden quick-add-field">
               Infos brutes a parser
               <textarea id="fSourceNotes" name="sourceNotes" rows="5" placeholder="Colle ici des messages, liens, emails, horaires..."></textarea>
             </label>

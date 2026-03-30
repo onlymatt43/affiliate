@@ -10,6 +10,13 @@ Deploy all local changes to Vercel production via `git push origin main`.
 This project uses **Vercel** for hosting and **Turso** for the database.
 Local `vercel dev` is for development only — all real data lives in prod.
 
+**Production URL:** `https://affiliates.onlymatt.ca`
+**Auth cookie:** `affiliate_admin` — value = `ADMIN_SESSION_TOKEN` from `.env.local`
+**Turso seeding:** If data is missing from prod, bulk-upsert from `data/collaborators.json` or `data/affiliates.json` using:
+```bash
+node -e "const https=require('https'),data=JSON.stringify({collaborators:require('./data/collaborators.json')}),o={hostname:'affiliates.onlymatt.ca',path:'/api/collaborators-bulk-upsert',method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(data),'Cookie':'affiliate_admin=<TOKEN>'}};const r=https.request(o,res=>{let b='';res.on('data',c=>b+=c);res.on('end',()=>console.log(res.statusCode,b))});r.write(data);r.end()"
+```
+
 ## Pre-flight Checks
 
 Before committing, verify:

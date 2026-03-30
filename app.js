@@ -25,7 +25,8 @@ const state = {
   localAffiliates: [],
   collaborators: [],
   baseCollaborators: [],
-  localCollaborators: []
+  localCollaborators: [],
+  quickAddMode: false
 };
 
 const metaCache = new Map();
@@ -57,7 +58,8 @@ const refs = {
   unlockInput: document.getElementById("unlockInput"),
   unlockBtn: document.getElementById("unlockBtn"),
   lockBtn: document.getElementById("lockBtn"),
-  accessStatus: document.getElementById("accessStatus")
+  accessStatus: document.getElementById("accessStatus"),
+  quickAddToggle: document.getElementById("quickAddToggle")
 };
 
 const LOCAL_STORAGE_KEY = "affiliateHubLocalAffiliates";
@@ -521,6 +523,22 @@ function extractCollaboratorInsights(rawText) {
       note: noteMatch ? toText(noteMatch[0]) : ""
     }
   };
+}
+
+function extractNameFromUrl(url) {
+  if (!url) return "";
+  try {
+    const seg = new URL(url).pathname.split("/").filter(Boolean)[0] || "";
+    let name = seg.replace(/^[_@]+/, "");
+    name = name.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2");
+    name = name.replace(/_/g, " ").replace(/\s+x{2,}$/i, "").replace(/\s*\d+$/, "").trim();
+    return name.split(/\s+/).filter(Boolean).map((w) => {
+      if (w === w.toUpperCase() && w.length > 1) return w;
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    }).join(" ");
+  } catch (e) {
+    return "";
+  }
 }
 
 function normalizeCollaboratorShape(raw, index) {
@@ -1427,19 +1445,31 @@ function buildAffiliateFromForm(formData) {
   return normalizeAffiliateShape(raw, 0);
 }
 
+function detectPlatformFromUrl(url) {
+  if (!url) return null;
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+    if (["x.com", "twitter.com"].includes(hostname)) return "x";
+    if (hostname === "instagram.com") return "instagram";
+    if (hostname === "tiktok.com") return "tiktok";
+  } catch (e) {}
+  return null;
+}
+
 function buildCollaboratorFromForm(formData) {
   const sourceNotes = toText(formData.get("sourceNotes"));
   const extracted = extractCollaboratorInsights(sourceNotes);
   const privateLinksRaw = toText(formData.get("privateLinks")) || extracted.privateLinks.map((entry) => entry.url).join("\n");
+  const publicLink = toText(formData.get("publicLink")) || extracted.publicLink;
 
   const raw = {
     id: `${slugify(toText(formData.get("name")) || "collaborator")}-${Date.now()}`,
     name: toText(formData.get("name")),
-    platform: toText(formData.get("platform")),
+    platform: detectPlatformFromUrl(publicLink) || toText(formData.get("platform")),
     niche: toText(formData.get("niche")),
     format: toText(formData.get("format")),
     tone: toText(formData.get("tone")),
-    publicLink: toText(formData.get("publicLink")) || extracted.publicLink,
+    publicLink,
     privateLinks: privateLinksRaw,
     contact: toText(formData.get("contact")) || extracted.contact,
     rates: toText(formData.get("rates")),
@@ -2138,6 +2168,22 @@ function bindComposerActions() {
       if (fBookingDate && !fBookingDate.value && extracted.booking.dateLabel) fBookingDate.value = extracted.booking.dateLabel;
       if (fBookingTime && !fBookingTime.value && extracted.booking.timeLabel) fBookingTime.value = extracted.booking.timeLabel;
       if (fBookingLocation && !fBookingLocation.value && extracted.booking.location) fBookingLocation.value = extracted.booking.location;
+      if (state.quickAddMode) {
+        const fName = document.getElementById("fName");
+        if (fName && !fName.value && extracted.publicLink) {
+          const suggested = extractNameFromUrl(extracted.publicLink);
+          if (suggested) fName.value = suggested;
+        }
+      }
+    });
+  }
+
+  if (refs.quickAddToggle) {
+    refs.quickAddToggle.addEventListener("click", () => {
+      state.quickAddMode = !state.quickAddMode;
+      refs.affiliateForm.classList.toggle("is-quick-add", state.quickAddMode);
+      refs.quickAddToggle.classList.toggle("is-active", state.quickAddMode);
+      refs.quickAddToggle.textContent = state.quickAddMode ? "✕ Mode standard" : "⚡ Mode rapide";
     });
   }
 
