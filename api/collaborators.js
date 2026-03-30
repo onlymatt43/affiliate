@@ -19,9 +19,14 @@ module.exports = async function handler(req, res) {
   if (req.method === "GET") {
     try {
       const payload = await listCollaborators();
+      const isAdmin = isAuthenticated(req);
+      // Strip private email from public responses
+      const collaborators = isAdmin
+        ? payload.collaborators
+        : payload.collaborators.map(({ email: _email, ...rest }) => rest);
       res.status(200).json({
         ok: true,
-        collaborators: payload.collaborators,
+        collaborators,
         persistence: {
           mode: payload.mode,
           writable: payload.writable

@@ -365,6 +365,111 @@ function renderBookingTimeline() {
   section.classList.remove("is-hidden");
 }
 
+// --- Twitter OAuth card unlock ---
+
+const UNLOCKED_COLLAB_KEY = "unlocked_collab_ids";
+
+function getUnlockedIds() {
+  try {
+    return JSON.parse(sessionStorage.getItem(UNLOCKED_COLLAB_KEY) || "[]");
+  } catch (_) {
+    return [];
+  }
+}
+
+function addUnlockedId(id) {
+  const ids = getUnlockedIds();
+  if (!ids.includes(id)) {
+    ids.push(id);
+    sessionStorage.setItem(UNLOCKED_COLLAB_KEY, JSON.stringify(ids));
+  }
+}
+
+function swapCardToPrivate(collabId) {
+  const card = document.querySelector(`[data-collab-id="${CSS.escape(collabId)}"]`);
+  if (!card) return;
+  const collab = findCollaboratorById(collabId);
+  if (!collab) return;
+  const platformLabel = PLATFORM_LABELS[collab.platform] || collab.platform;
+  const nicheLabel = NICHE_LABELS[collab.niche] || collab.niche;
+  const privateMarkup = collaboratorPrivateCardMarkup(collab, platformLabel, nicheLabel);
+  const tmp = document.createElement("div");
+  tmp.innerHTML = privateMarkup.trim();
+  const newCard = tmp.firstElementChild;
+  if (newCard) {
+    card.replaceWith(newCard);
+    newCard.classList.add("is-shared");
+    setTimeout(() => newCard.classList.remove("is-shared"), 2000);
+  }
+}
+
+function showAuthOverlay(card, collabId) {
+  // Dismiss any existing overlay
+  document.querySelectorAll(".collab-auth-overlay").forEach((el) => el.remove());
+
+  // Check sessionStorage — already unlocked?
+  if (getUnlockedIds().includes(collabId)) {
+    swapCardToPrivate(collabId);
+    return;
+  }
+
+  const overlay = document.createElement("div");
+  overlay.className = "collab-auth-overlay";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.innerHTML = `
+    <button type="button" class="collab-auth-overlay__close" aria-label="Fermer">&times;</button>
+    <a
+      class="collab-auth-overlay__btn"
+      href="/api/auth/twitter/init?id=${encodeURIComponent(collabId)}"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      Continuer avec X
+    </a>
+  `;
+
+  overlay.querySelector(".collab-auth-overlay__close").addEventListener("click", (e) => {
+    e.stopPropagation();
+    overlay.remove();
+  });
+
+  card.appendChild(overlay);
+  card.classList.add("has-auth-overlay");
+}
+
+function handleUnlockedParam() {
+  const params = new URLSearchParams(location.search);
+  const unlockedId = params.get("unlocked");
+  const authError = params.get("auth_error");
+  const errorId = params.get("id");
+
+  if (!unlockedId && !authError) return;
+
+  history.replaceState(null, "", location.pathname);
+
+  if (unlockedId) {
+    addUnlockedId(unlockedId);
+    if (state.activeEntity !== "collaborators") {
+      state.activeEntity = "collaborators";
+      applyEntityMode();
+      mergeCollaborators();
+      renderCards();
+      applyFilters();
+    }
+    setTimeout(() => swapCardToPrivate(unlockedId), 400);
+    return;
+  }
+
+  if (authError && errorId) {
+    setTimeout(() => {
+      const card = document.querySelector(`[data-collab-id="${CSS.escape(errorId)}"]`);
+      if (!card) return;
+      card.classList.add("auth-shake");
+      setTimeout(() => card.classList.remove("auth-shake"), 700);
+    }, 300);
+  }
+}
+
 function handleShareParam() {
   const params = new URLSearchParams(location.search);
   const shareId = params.get("share");
@@ -2132,9 +2237,10 @@ function bindCardActions() {
 
         const card = event.target.closest(".collaborator-card.public-card");
         if (card && !event.target.closest(".collab-panel__link") && !event.target.closest(".collab-panel__share-btn")) {
-          const isOpen = card.classList.contains("is-panel-open");
-          refs.cardsGrid.querySelectorAll(".collaborator-card.public-card.is-panel-open").forEach((c) => c.classList.remove("is-panel-open"));
-          if (!isOpen) card.classList.add("is-panel-open");
+          // If clicking the auth overlay itself, ignore (handled by the form submit)
+          if (event.target.closest(".collab-auth-overlay")) return;
+          const collabId = card.dataset.collabId || card.dataset.id;
+          showAuthOverlay(card, collabId);
         }
       }
       return;
@@ -2463,6 +2569,7 @@ async function init() {
     bindCardActions();
     bindComposerActions();
     updateDebugInfo();
+    handleUnlockedParam();
     handleShareParam();
   } catch (error) {
     state.debug.initError = String(error?.message || error || "unknown init error");

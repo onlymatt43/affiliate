@@ -793,6 +793,71 @@ textarea:focus {
 }
 /* --- end shared card animation --- */
 
+/* --- Twitter auth overlay on collaborator cards --- */
+.collab-auth-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+  border-radius: inherit;
+  gap: 0.75rem;
+}
+
+.collab-auth-overlay__close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.8rem;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.6);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+}
+.collab-auth-overlay__close:hover {
+  color: #fff;
+}
+
+.collab-auth-overlay__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: #000;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.65rem 1.2rem;
+  border-radius: 9999px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.collab-auth-overlay__btn:hover {
+  background: #1a1a1a;
+}
+.collab-auth-overlay__btn svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+@keyframes auth-shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-6px); }
+  40%       { transform: translateX(6px); }
+  60%       { transform: translateX(-4px); }
+  80%       { transform: translateX(4px); }
+}
+.auth-shake {
+  animation: auth-shake 0.6s ease-in-out;
+}
+/* --- end Twitter auth overlay --- */
+
 .preview-shell {
   border: 1px solid #ead5b7;
   border-radius: 12px;
