@@ -280,6 +280,115 @@ function bookingSummary(raw) {
   return booking.note;
 }
 
+function getConflicts(collaborators) {
+  const withTs = collaborators
+    .map((c) => ({ id: c.id, ts: getBookingTimestamp(c) }))
+    .filter((c) => c.ts != null);
+  const conflictIds = new Set();
+  const THREE_HOURS = 3 * 60 * 60 * 1000;
+  for (let i = 0; i < withTs.length; i++) {
+    for (let j = i + 1; j < withTs.length; j++) {
+      if (Math.abs(withTs[i].ts - withTs[j].ts) < THREE_HOURS) {
+        conflictIds.add(withTs[i].id);
+        conflictIds.add(withTs[j].id);
+      }
+    }
+  }
+  return conflictIds;
+}
+
+function shareCollaborator(id, name) {
+  const url = `${location.origin}${location.pathname}?share=${encodeURIComponent(id)}`;
+  const title = name ? `RV · ${name}` : "Rendez-vous";
+  if (navigator.share) {
+    navigator.share({ title, url }).catch(() => {});
+    return;
+  }
+  navigator.clipboard.writeText(url).then(() => {
+    const feedbackEl = document.getElementById("shareGlobalFeedback");
+    if (feedbackEl) {
+      feedbackEl.textContent = "Lien copié !";
+      setTimeout(() => { feedbackEl.textContent = ""; }, 2500);
+    }
+  }).catch(() => {});
+}
+
+function renderBookingTimeline() {
+  const section = document.getElementById("bookingTimeline");
+  if (!section) return;
+  const container = section.querySelector(".timeline-entries");
+  if (!container) return;
+
+  const now = Date.now();
+  const collabs = state.collaborators || [];
+  const upcoming = collabs
+    .map((c) => ({ item: c, ts: getBookingTimestamp(c) }))
+    .filter(({ ts }) => ts != null && ts > now)
+    .sort((a, b) => a.ts - b.ts);
+
+  if (upcoming.length === 0) {
+    section.classList.add("is-hidden");
+    return;
+  }
+
+  const conflicts = getConflicts(collabs);
+
+  container.innerHTML = upcoming.map(({ item, ts }) => {
+    const booking = normalizeBooking(item.booking);
+    const dateStr = [booking.dateLabel, booking.timeLabel].filter(Boolean).join(" · ");
+    const locationStr = booking.location || "";
+    const isConflict = conflicts.has(item.id);
+    const d = new Date(ts);
+    const diff = ts - now;
+    const diffDays = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    const daysLabel = diffDays === 0 ? "Aujourd'hui" : diffDays === 1 ? "Demain" : `Dans ${diffDays}j`;
+
+    return `
+      <div class="timeline-entry${isConflict ? " has-conflict" : ""}" data-collab-id="${escapeHtml(item.id)}">
+        <div class="timeline-entry__days">${escapeHtml(daysLabel)}</div>
+        <div class="timeline-entry__name">${escapeHtml(item.name)}</div>
+        ${dateStr ? `<div class="timeline-entry__date">${escapeHtml(dateStr)}</div>` : ""}
+        ${locationStr ? `<div class="timeline-entry__location">${escapeHtml(locationStr)}</div>` : ""}
+        ${isConflict ? `<div class="timeline-entry__conflict">⚠ Conflit d'horaire</div>` : ""}
+        <button type="button" class="timeline-entry__share" data-action="share-timeline-entry" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}">Partager</button>
+      </div>
+    `;
+  }).join("");
+
+  const feedbackEl = document.createElement("span");
+  feedbackEl.id = "shareGlobalFeedback";
+  feedbackEl.className = "share-feedback";
+  feedbackEl.setAttribute("aria-live", "polite");
+  const existing = document.getElementById("shareGlobalFeedback");
+  if (!existing) section.appendChild(feedbackEl);
+
+  section.classList.remove("is-hidden");
+}
+
+function handleShareParam() {
+  const params = new URLSearchParams(location.search);
+  const shareId = params.get("share");
+  if (!shareId) return;
+
+  history.replaceState(null, "", location.pathname);
+
+  if (state.activeEntity !== "collaborators") {
+    state.activeEntity = "collaborators";
+    applyEntityMode();
+    mergeCollaborators();
+    renderCards();
+    applyFilters();
+  }
+
+  setTimeout(() => {
+    const card = document.querySelector(`[data-collab-id="${CSS.escape(shareId)}"]`);
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    card.classList.add("is-shared");
+    setTimeout(() => card.classList.remove("is-shared"), 3000);
+  }, 400);
+}
+
 const MONTH_TOKEN_TO_INDEX = {
   jan: 0,
   january: 0,
@@ -752,12 +861,17 @@ function collaboratorPublicCardMarkup(item, platformLabel, nicheLabel) {
     ? `<div class="collab-panel__copy-row" data-action="copy-contact-inline" data-copy-value="${escapeHtml(item.contact)}" title="Cliquer pour copier">${escapeHtml(item.contact)}</div>`
     : "";
 
+  const bookingBadgeText = bookingSummary(item.booking);
+  const bookingBadge = bookingBadgeText ? `<span class="booking-badge">${escapeHtml(bookingBadgeText)}</span>` : "";
+
   return `
     <article
       class="affiliate-card collaborator-card public-card"
       data-id="${escapeHtml(item.id)}"
+      data-collab-id="${escapeHtml(item.id)}"
       data-public-link="${escapeHtml(item.publicLink)}"
       tabindex="0">
+      ${bookingBadge}
       <div class="collab-bg">
         <div class="collab-bg__fallback" data-preview-fallback="${escapeHtml(item.id)}"></div>
         <img class="collab-bg__img is-hidden" data-preview-image="${escapeHtml(item.id)}" alt="" loading="lazy" />
@@ -772,6 +886,7 @@ function collaboratorPublicCardMarkup(item, platformLabel, nicheLabel) {
         <div class="collab-panel__name">${escapeHtml(item.name)}</div>
         <div class="collab-panel__links">${linksMarkup}</div>
         ${contactMarkup}
+        ${bookingBadgeText ? `<button type="button" class="collab-panel__share-btn" data-action="share-collab" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}">Partager RV</button>` : ""}
       </div>
     </article>
   `;
@@ -788,6 +903,7 @@ function collaboratorPrivateCardMarkup(item, platformLabel, nicheLabel) {
     <article
       class="affiliate-card collaborator-card"
       data-id="${escapeHtml(item.id)}"
+      data-collab-id="${escapeHtml(item.id)}"
       data-platform="${escapeHtml(item.platform)}"
       data-niche="${escapeHtml(item.niche)}"
       data-format="${escapeHtml(item.format)}"
@@ -1596,6 +1712,7 @@ function rerenderAll() {
   applyLanguage();
   applyViewMode();
   applyFilters();
+  renderBookingTimeline();
 }
 
 function getAllCards() {
@@ -1811,6 +1928,8 @@ function applyEntityMode() {
       ? "Colle un bloc brut et l'app extrait lien principal, contacts et booking quand possible."
       : "Les ajouts sont sauves localement dans ton navigateur (localStorage).";
   }
+
+  renderBookingTimeline();
 }
 
 function cardMatches(card, searchTerm, platform, niche, format, tone, options = {}) {
@@ -1895,6 +2014,16 @@ function bindFilters() {
     control.addEventListener("input", applyFilters);
     control.addEventListener("change", applyFilters);
   });
+
+  const timeline = document.getElementById("bookingTimeline");
+  if (timeline) {
+    timeline.addEventListener("click", (event) => {
+      const shareBtn = event.target.closest("[data-action='share-timeline-entry']");
+      if (shareBtn) {
+        shareCollaborator(shareBtn.dataset.id, shareBtn.dataset.name);
+      }
+    });
+  }
 }
 
 function bindLanguageToggle() {
@@ -1979,8 +2108,14 @@ function bindCardActions() {
           return;
         }
 
+        const shareBtn = event.target.closest("[data-action='share-collab']");
+        if (shareBtn) {
+          shareCollaborator(shareBtn.dataset.id, shareBtn.dataset.name);
+          return;
+        }
+
         const card = event.target.closest(".collaborator-card.public-card");
-        if (card && !event.target.closest(".collab-panel__link")) {
+        if (card && !event.target.closest(".collab-panel__link") && !event.target.closest(".collab-panel__share-btn")) {
           const isOpen = card.classList.contains("is-panel-open");
           refs.cardsGrid.querySelectorAll(".collaborator-card.public-card.is-panel-open").forEach((c) => c.classList.remove("is-panel-open"));
           if (!isOpen) card.classList.add("is-panel-open");
@@ -2312,6 +2447,7 @@ async function init() {
     bindCardActions();
     bindComposerActions();
     updateDebugInfo();
+    handleShareParam();
   } catch (error) {
     state.debug.initError = String(error?.message || error || "unknown init error");
     refs.resultsInfo.textContent = "Erreur: mode API-only. Lance le serveur dev (ex: npx vercel dev).";
