@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const { getAdminPassword, getSessionToken, buildSessionCookie } = require("../lib/auth");
 
 module.exports = async function handler(req, res) {
@@ -7,7 +8,12 @@ module.exports = async function handler(req, res) {
   }
 
   const password = String(req.body?.password || "");
-  if (password !== getAdminPassword()) {
+  const expected = getAdminPassword();
+  const passwordBuf = Buffer.from(password);
+  const expectedBuf = Buffer.from(expected);
+  const match = passwordBuf.length === expectedBuf.length &&
+    crypto.timingSafeEqual(passwordBuf, expectedBuf);
+  if (!match) {
     res.status(401).json({ ok: false, error: "Invalid password" });
     return;
   }
