@@ -1461,10 +1461,11 @@ function buildCollaboratorFromForm(formData) {
   const extracted = extractCollaboratorInsights(sourceNotes);
   const privateLinksRaw = toText(formData.get("privateLinks")) || extracted.privateLinks.map((entry) => entry.url).join("\n");
   const publicLink = toText(formData.get("publicLink")) || extracted.publicLink;
+  const name = toText(formData.get("name")) || extractNameFromUrl(publicLink);
 
   const raw = {
-    id: `${slugify(toText(formData.get("name")) || "collaborator")}-${Date.now()}`,
-    name: toText(formData.get("name")),
+    id: `${slugify(name || "collaborator")}-${Date.now()}`,
+    name,
     platform: detectPlatformFromUrl(publicLink) || toText(formData.get("platform")),
     niche: toText(formData.get("niche")),
     format: toText(formData.get("format")),
