@@ -1296,8 +1296,8 @@ function affiliateDedupKey(item) {
 }
 
 function collaboratorDedupKey(item) {
-  const idKey = String(item.id || "").trim().toLowerCase();
-  if (idKey) return `id:${idKey}`;
+  const publicLink = String(item.publicLink || "").trim().toLowerCase();
+  if (publicLink) return `url:${publicLink}`;
   const name = String(item.name || "").trim().toLowerCase();
   const platform = String(item.platform || "").trim().toLowerCase();
   return `np:${name}|${platform}`;
@@ -2514,7 +2514,8 @@ function bindComposerActions() {
         }
 
         if (isRemotePersistenceEnabled()) {
-          await remoteUpsertCollaborator(collaborator);
+          // Strip id so the server deduplicates by publicLink (avoids duplicates on multi-submit)
+          await remoteUpsertCollaborator({ ...collaborator, id: "" });
           await loadCollaborators();
         } else {
           state.localCollaborators.push(collaborator);
