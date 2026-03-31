@@ -26,28 +26,40 @@ module.exports = async function handler(req, res) {
   const isAffiliate = !item.publicLink && item.promoUrl;
   const langLabel = lang === "fr" ? "français" : "English";
 
+  const voiceGuide = `Ton de voix (IMPORTANT — respecte ça en tout temps):
+- Neutre, sexy, confident. Jamais enthousiaste, jamais vendeur.
+- Tu parles de TON plaisir, ton expérience, ta satisfaction personnelle. Tu n'invites pas — ça va de soi que les gens feront pareil.
+- Langage simple, direct. Mots courts. Pas de jargon marketing.
+- Ton qui varie : parfois plus chill, parfois plus intime, parfois matter-of-fact.
+- Écris comme un humain : petites fautes, phrases incomplètes ok, pas parfait. Genre "j'ai essayé ça pis..." ou "honnêtement c'est bon".
+- JAMAIS : "découvrez", "profitez", "n'attendez plus", "incroyable", "vous allez adorer", "cliquez ici", "offre limitée".`;
+
   let systemPrompt = "";
 
   if (isAffiliate) {
     const specs = lang === "fr" ? (item.fr?.specs || "") : (item.en?.specs || "");
     const tags = lang === "fr" ? (item.fr?.tags || "") : (item.en?.tags || "");
-    systemPrompt = `Tu es un créateur de contenu OnlyFans qui écrit des posts promotionnels en ${langLabel}.
+    systemPrompt = `${voiceGuide}
+
+Tu es un créateur de contenu OnlyFans. Écris un post promotionnel en ${langLabel}.
 
 Marque: ${item.name}
 Plateforme: ${item.platform}
 URL promo: ${item.promoUrl}${item.promoCode ? `\nCode promo: ${item.promoCode}` : ""}${item.mentions ? `\nMentions: ${item.mentions}` : ""}${item.postRequirements ? `\nExigences du post: ${item.postRequirements}` : ""}${item.specificities ? `\nSpécificités: ${item.specificities}` : ""}${specs ? `\nSpecs: ${specs}` : ""}${tags ? `\nHashtags à inclure: ${tags}` : ""}
 
-Ton: ${item.tone}. Format: ${item.format}. Sois naturel, engageant, authentique. Inclure le lien et les hashtags fournis. Maximum 300 mots.`;
+Format: ${item.format}. Maximum 300 mots.`;
   } else {
     const specs = lang === "fr" ? (item.fr?.specs || "") : (item.en?.specs || "");
     const tags = lang === "fr" ? (item.fr?.tags || "") : (item.en?.tags || "");
-    systemPrompt = `Tu es un créateur de contenu OnlyFans qui écrit des posts de collaboration en ${langLabel}.
+    systemPrompt = `${voiceGuide}
+
+Tu es un créateur de contenu OnlyFans. Écris un post de collaboration en ${langLabel}.
 
 Collaborateur: ${item.name}
 Plateforme: ${item.platform}
 Lien: ${item.publicLink}${item.contact ? `\nContact: ${item.contact}` : ""}${item.rates ? `\nRates: ${item.rates}` : ""}${specs ? `\nSpecs de collaboration: ${specs}` : ""}${tags ? `\nHashtags à inclure: ${tags}` : ""}
 
-Ton: ${item.tone || "authority"}. Format: ${item.format || "short-video"}. Sois naturel, engageant, authentique. Maximum 300 mots.`;
+Format: ${item.format || "short-video"}. Maximum 300 mots.`;
   }
 
   // Build message history: system context + prior turns + new user message (if any)
