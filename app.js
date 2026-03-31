@@ -2280,6 +2280,10 @@ function bindCardActions() {
           <button type="button" class="generate-post-overlay__generate-btn accent-ai">Générer</button>
           <button type="button" class="generate-post-overlay__copy-btn" disabled>Copier</button>
         </div>
+        <div class="generate-post-overlay__chat">
+          <input type="text" class="generate-post-overlay__chat-input" placeholder="Ex: rends-le plus court, ajoute des emojis..." />
+          <button type="button" class="generate-post-overlay__chat-send accent-ai" disabled>Envoyer</button>
+        </div>
       </div>
     `;
 
@@ -2291,6 +2295,10 @@ function bindCardActions() {
     const resultEl = overlay.querySelector(".generate-post-overlay__result");
     const generateBtn = overlay.querySelector(".generate-post-overlay__generate-btn");
     const copyBtn = overlay.querySelector(".generate-post-overlay__copy-btn");
+    const chatInput = overlay.querySelector(".generate-post-overlay__chat-input");
+    const chatSend = overlay.querySelector(".generate-post-overlay__chat-send");
+
+    let conversationHistory = []; // [{role, content}]
 
     closeBtn.addEventListener("click", () => overlay.remove());
     overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
@@ -2300,32 +2308,50 @@ function bindCardActions() {
         langBtns.forEach((b) => b.classList.remove("is-active"));
         btn.classList.add("is-active");
         activeLang = btn.dataset.lang;
+        conversationHistory = [];
+        runGenerate();
       });
     });
 
-    generateBtn.addEventListener("click", async () => {
+    async function runGenerate(extraUserMessage = null) {
       loadingEl.classList.remove("is-hidden");
       resultEl.value = "";
       copyBtn.disabled = true;
+      chatSend.disabled = true;
       generateBtn.disabled = true;
+
+      if (extraUserMessage) {
+        conversationHistory.push({ role: "user", content: extraUserMessage });
+      }
 
       try {
         const res = await fetch("/api/generate-post", {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ item, lang: activeLang })
+          body: JSON.stringify({
+            item,
+            lang: activeLang,
+            messages: conversationHistory.length > 0 ? conversationHistory : []
+          })
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || "Erreur");
         resultEl.value = data.post;
+        conversationHistory.push({ role: "assistant", content: data.post });
         copyBtn.disabled = false;
+        chatSend.disabled = false;
       } catch (err) {
         resultEl.value = "Erreur : " + err.message;
       } finally {
         loadingEl.classList.add("is-hidden");
         generateBtn.disabled = false;
       }
+    }
+
+    generateBtn.addEventListener("click", () => {
+      conversationHistory = [];
+      runGenerate();
     });
 
     copyBtn.addEventListener("click", () => {
@@ -2336,8 +2362,20 @@ function bindCardActions() {
       });
     });
 
+    function sendChatMessage() {
+      const msg = chatInput.value.trim();
+      if (!msg || chatSend.disabled) return;
+      chatInput.value = "";
+      runGenerate(msg);
+    }
+
+    chatSend.addEventListener("click", sendChatMessage);
+    chatInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+    });
+
     document.body.appendChild(overlay);
-    generateBtn.click(); // auto-generate on open
+    runGenerate(); // auto-generate on open
   }
 
   refs.cardsGrid.addEventListener("click", async (event) => {

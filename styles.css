@@ -972,6 +972,25 @@ textarea:focus {
   color: #444;
 }
 .generate-post-overlay__copy-btn:disabled { opacity: 0.4; cursor: default; }
+.generate-post-overlay__chat {
+  display: flex;
+  gap: 0.5rem;
+  border-top: 1px solid #eee;
+  padding-top: 0.75rem;
+  margin-top: 0.25rem;
+}
+.generate-post-overlay__chat-input {
+  flex: 1;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+}
+.generate-post-overlay__chat-input:focus {
+  border-color: #c8860a;
+}
 /* --- end AI generate post overlay --- */
 
 .preview-shell {
