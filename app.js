@@ -1232,6 +1232,12 @@ async function hydratePublicPreviews() {
   await hydrateCardPreviews(collabCards, "publicLink");
 }
 
+async function hydratePrivateAffiliatePreviews() {
+  if (!state.isUnlocked || isCollaboratorMode()) return;
+  const cards = Array.from(refs.cardsGrid.querySelectorAll(".affiliate-card:not(.collaborator-card)"));
+  await hydrateCardPreviews(cards, "promoUrl");
+}
+
 async function hydratePrivateCollaboratorPreviews() {
   if (!state.isUnlocked || !isCollaboratorMode()) return;
   const cards = Array.from(refs.cardsGrid.querySelectorAll(".collaborator-card:not(.public-card)"));
@@ -1244,6 +1250,7 @@ function renderCards() {
   refs.cardsGrid.innerHTML = activeItems.map(cardMarkup).join("");
   hydratePublicPreviews();
   hydratePrivateCollaboratorPreviews();
+  hydratePrivateAffiliatePreviews();
   updateDebugInfo();
 }
 
