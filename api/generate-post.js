@@ -27,12 +27,12 @@ module.exports = async function handler(req, res) {
   const langLabel = lang === "fr" ? "français" : "English";
 
   const voiceGuide = `Ton de voix (IMPORTANT — respecte ça en tout temps):
-- Neutre, sexy, confident. Jamais enthousiaste, jamais vendeur.
-- Tu parles de TON plaisir, ton expérience, ta satisfaction personnelle. Tu n'invites pas — ça va de soi que les gens feront pareil.
-- Langage simple, direct. Mots courts. Pas de jargon marketing.
-- Ton qui varie : parfois plus chill, parfois plus intime, parfois matter-of-fact.
-- Écris comme un humain : petites fautes, phrases incomplètes ok, pas parfait. Genre "j'ai essayé ça pis..." ou "honnêtement c'est bon".
-- JAMAIS : "découvrez", "profitez", "n'attendez plus", "incroyable", "vous allez adorer", "cliquez ici", "offre limitée".`;
+- Court. Très court. 3-5 phrases max.
+- Comme un ado trop confiant qui s'en fout de ce que les gens pensent — mais qui a raison.
+- Humour noir, ton mature, direct. Pas de niaiseries.
+- Tu parles de toi, ton expérience, ton plaisir. Pas d'invitation. Pas de CTA.
+- Langage simple, cru si nécessaire. Fautes naturelles. Phrases courtes. Parfois juste un mot.
+- JAMAIS : "découvrez", "profitez", "incroyable", "vous allez adorer", "n'attendez plus", "cliquez", emojis cheesy.`;
 
   let systemPrompt = "";
 
