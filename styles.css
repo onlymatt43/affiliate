@@ -1563,12 +1563,16 @@ body.dark-collab-mode .affiliate-card.public-card h2 {
 }
 
 body.dark-collab-mode .affiliate-card.public-card .preview-shell {
-  background: rgba(255, 245, 210, 0.03);
-  border-color: rgba(200, 145, 26, 0.18);
+  background: linear-gradient(135deg, rgba(200, 145, 26, 0.07) 0%, rgba(139, 58, 15, 0.1) 100%);
+  border-color: rgba(200, 145, 26, 0.25);
+  border-style: solid;
 }
 
 body.dark-collab-mode .affiliate-card.public-card .preview-fallback {
-  color: #6b5e48;
+  color: rgba(200, 145, 26, 0.55);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 body.dark-collab-mode .affiliate-card.public-card .content-block {
