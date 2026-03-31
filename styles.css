@@ -1401,9 +1401,11 @@ body.dark-collab-mode .entity-toggle button.is-active {
   color: #c8911a;
 }
 
-/* Dark mode grid for collab mode */
+/* Dark mode grid — auto-rows for grid-row:span to work on affiliates */
 body.dark-collab-mode .cards-grid {
   gap: 1.1rem;
+  grid-auto-rows: minmax(160px, auto);
+  align-items: start;
 }
 
 /* ---- Card archetypes ---- */
@@ -1495,9 +1497,8 @@ body.dark-collab-mode .collaborator-card.public-card.card--featured:hover {
   box-shadow: 0 0 60px rgba(200, 145, 26, 0.4), 0 0 20px rgba(139, 58, 15, 0.45);
 }
 
-/* SMALL — slightly reduced opacity fallback, subtle */
+/* SMALL — aspect-ratio set inline per card, just dim slightly */
 body.dark-collab-mode .collaborator-card.public-card.card--small {
-  aspect-ratio: 0.9;
   opacity: 0.92;
 }
 

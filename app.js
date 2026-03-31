@@ -909,7 +909,13 @@ function publicCardMarkup(item, platformLabel, nicheLabel, archetype = "default"
   const nameRotation = archetype === "editorial" ? randomBetween(-6, 6).toFixed(1) : 0;
   const borderOpacity = randomBetween(0.14, 0.38).toFixed(2);
 
-  const articleStyle = `border: 1px solid rgba(200, 145, 26, ${borderOpacity});`;
+  // Random card height per archetype (affiliates are flow cards — use min-height + grid-row)
+  const minHeightMap = { default: [200, 280], featured: [320, 420], small: [160, 220], editorial: [250, 340] };
+  const [mhMin, mhMax] = minHeightMap[archetype] || [200, 280];
+  const minHeight = Math.round(randomBetween(mhMin, mhMax));
+  const gridRow = archetype === "featured" ? "span 2" : "span 1";
+
+  const articleStyle = `border: 1px solid rgba(200, 145, 26, ${borderOpacity}); min-height: ${minHeight}px; grid-row: ${gridRow};`;
   const nameStyle = [
     `font-size: ${nameSize}rem`,
     `font-weight: ${fontWeight}`,
@@ -1086,7 +1092,17 @@ function collaboratorPublicCardMarkup(item, platformLabel, nicheLabel, archetype
   const nameRotation = archetype === "editorial" ? randomBetween(-8, 8).toFixed(1) : 0;
   const borderOpacity = randomBetween(0.14, 0.38).toFixed(2);
 
-  const articleStyle = `border: 1px solid rgba(200, 145, 26, ${borderOpacity});`;
+  // Random card size per archetype range
+  const aspectRatioMap = {
+    default:   [0.88, 1.12],
+    featured:  [0.60, 0.82],  // tall portrait — spans 2 col so big
+    small:     [1.28, 1.68],  // short & squat
+    editorial: [0.72, 0.96]   // portrait-ish, dramatic
+  };
+  const [arMin, arMax] = aspectRatioMap[archetype] || [0.88, 1.12];
+  const aspectRatio = randomBetween(arMin, arMax).toFixed(3);
+
+  const articleStyle = `border: 1px solid rgba(200, 145, 26, ${borderOpacity}); aspect-ratio: ${aspectRatio};`;
   const nameStyle = [
     `font-size: ${nameSize}rem`,
     `font-weight: ${fontWeight}`,
