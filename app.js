@@ -68,6 +68,56 @@ const VIEW_MODE_STORAGE_KEY = "affiliateHubViewMode";
 const AUTO_EXPORT_STORAGE_KEY = "affiliateHubAutoExportLocal";
 const API_ONLY_TESTING = true;
 
+// --- Arty dark mode helpers ---
+function randomBetween(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+function randomPick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function assignCardArchetypes(items) {
+  const thresholds = [50, 70, 90, 100]; // default 50%, featured 20%, small 20%, editorial 10%
+  const types = ["default", "featured", "small", "editorial"];
+  return items.map((item) => {
+    const roll = Math.random() * 100;
+    const archetype = types[thresholds.findIndex((t) => roll < t)];
+    return { item, archetype };
+  });
+}
+
+function injectDarkBackground() {
+  document.body.classList.add("dark-collab-mode");
+  if (document.querySelector(".dark-orb")) return;
+  const orbDefs = [
+    { color: "#c8911a", minO: 0.02, maxO: 0.06 },
+    { color: "#8b3a0f", minO: 0.025, maxO: 0.065 },
+    { color: "#c8911a", minO: 0.015, maxO: 0.04 },
+    { color: "#ffffff", minO: 0.01, maxO: 0.025 },
+    { color: "#8b3a0f", minO: 0.02, maxO: 0.05 },
+    { color: "#c8911a", minO: 0.015, maxO: 0.035 }
+  ];
+  const count = Math.floor(randomBetween(4, 7));
+  for (let i = 0; i < count; i++) {
+    const orb = document.createElement("div");
+    orb.classList.add("dark-orb");
+    const def = orbDefs[i % orbDefs.length];
+    const size = Math.round(randomBetween(180, 580));
+    const top = Math.round(randomBetween(-8, 95));
+    const left = Math.round(randomBetween(-8, 98));
+    const opacity = randomBetween(def.minO, def.maxO).toFixed(3);
+    orb.style.cssText = `width:${size}px;height:${size}px;top:${top}%;left:${left}%;background:${def.color};opacity:${opacity};`;
+    document.body.appendChild(orb);
+  }
+}
+
+function removeDarkBackground() {
+  document.body.classList.remove("dark-collab-mode");
+  document.querySelectorAll(".dark-orb").forEach((el) => el.remove());
+}
+// --- end arty dark mode helpers ---
+
 function updateDebugInfo() {
   if (!refs.debugInfo) return;
   if (!state.debug.enabled) {
@@ -980,7 +1030,7 @@ function privateCardMarkup(item, platformLabel, nicheLabel) {
   `;
 }
 
-function collaboratorPublicCardMarkup(item, platformLabel, nicheLabel) {
+function collaboratorPublicCardMarkup(item, platformLabel, nicheLabel, archetype = "default") {
   const allLinks = [];
   if (item.publicLink) {
     let display = item.publicLink;
@@ -1005,15 +1055,44 @@ function collaboratorPublicCardMarkup(item, platformLabel, nicheLabel) {
   const bookingBadge = bookingBadgeText ? `<span class="booking-badge">${escapeHtml(bookingBadgeText)}</span>` : "";
   const bookingTs = getBookingTimestamp(item);
 
+  // Archetype-specific typography
+  const nameSizeBase = { default: 1.05, featured: 2.1, small: 0.88, editorial: 1.75 }[archetype] || 1.05;
+  const nameSize = (nameSizeBase + randomBetween(-0.15, 0.15)).toFixed(2);
+  const fontWeight = randomPick([400, 600, 800]);
+  const letterSpacing = randomBetween(0, 0.1).toFixed(3);
+  const textTransform = randomPick(["none", "uppercase"]);
+  const nameRotation = archetype === "editorial" ? randomBetween(-8, 8).toFixed(1) : 0;
+  const borderOpacity = randomBetween(0.14, 0.38).toFixed(2);
+
+  const articleStyle = `border: 1px solid rgba(200, 145, 26, ${borderOpacity});`;
+  const nameStyle = [
+    `font-size: ${nameSize}rem`,
+    `font-weight: ${fontWeight}`,
+    `letter-spacing: ${letterSpacing}em`,
+    `text-transform: ${textTransform}`,
+    archetype === "editorial" ? `transform: rotate(${nameRotation}deg); display: inline-block;` : ""
+  ].filter(Boolean).join("; ");
+
+  // Editorial: diagonal accent line + one flipped micro-label
+  const editorialAccent = archetype === "editorial"
+    ? `<span class="card--editorial__accent" aria-hidden="true"></span>`
+    : "";
+  const flippedLabel = archetype === "editorial" && platformLabel
+    ? `<span class="card--editorial__flip-label" aria-hidden="true">${escapeHtml(platformLabel)}</span>`
+    : "";
+
   return `
     <article
-      class="affiliate-card collaborator-card public-card"
+      class="affiliate-card collaborator-card public-card card--${archetype}"
+      style="${articleStyle}"
       data-id="${escapeHtml(item.id)}"
       data-collab-id="${escapeHtml(item.id)}"
       data-public-link="${escapeHtml(item.publicLink)}"
       data-booking-ts="${bookingTs || ""}"
       tabindex="0">
       ${bookingBadge}
+      ${editorialAccent}
+      ${flippedLabel}
       <div class="collab-bg">
         <div class="collab-bg__fallback" data-preview-fallback="${escapeHtml(item.id)}"></div>
         <img class="collab-bg__img is-hidden" data-preview-image="${escapeHtml(item.id)}" alt="" loading="lazy" />
@@ -1021,7 +1100,7 @@ function collaboratorPublicCardMarkup(item, platformLabel, nicheLabel) {
       <div class="collab-overlay">
         ${logoStripMarkup(item.logos, item.name)}
         <div class="collab-info">
-          <h2>${escapeHtml(item.name)}</h2>
+          <h2 style="${nameStyle}">${escapeHtml(item.name)}</h2>
         </div>
       </div>
       <div class="collab-panel">
@@ -1142,13 +1221,14 @@ function collaboratorPrivateCardMarkup(item, platformLabel, nicheLabel) {
   `;
 }
 
-function cardMarkup(item) {
+function cardMarkup(item, archetypeMap = new Map()) {
   const platformLabel = PLATFORM_LABELS[item.platform] || item.platform;
   const nicheLabel = NICHE_LABELS[item.niche] || item.niche;
 
   if (isCollaboratorMode()) {
     if (!state.isUnlocked) {
-      return collaboratorPublicCardMarkup(item, platformLabel, nicheLabel);
+      const archetype = archetypeMap.get(item.id) || "default";
+      return collaboratorPublicCardMarkup(item, platformLabel, nicheLabel, archetype);
     }
     return collaboratorPrivateCardMarkup(item, platformLabel, nicheLabel);
   }
@@ -1247,7 +1327,22 @@ async function hydratePrivateCollaboratorPreviews() {
 function renderCards() {
   const activeItems = getActiveItems();
   state.debug.renderedCount = activeItems.length;
-  refs.cardsGrid.innerHTML = activeItems.map(cardMarkup).join("");
+
+  const isPublicCollab = isCollaboratorMode() && !state.isUnlocked;
+  if (isPublicCollab) {
+    injectDarkBackground();
+  } else {
+    removeDarkBackground();
+  }
+
+  let archetypeMap = new Map();
+  if (isPublicCollab) {
+    assignCardArchetypes(activeItems).forEach(({ item, archetype }) => {
+      archetypeMap.set(item.id, archetype);
+    });
+  }
+
+  refs.cardsGrid.innerHTML = activeItems.map((item) => cardMarkup(item, archetypeMap)).join("");
   hydratePublicPreviews();
   hydratePrivateCollaboratorPreviews();
   hydratePrivateAffiliatePreviews();

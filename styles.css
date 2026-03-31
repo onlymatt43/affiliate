@@ -1322,3 +1322,183 @@ body.is-locked .public-card .card-head {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* ============================================================
+   DARK COLLAB MODE — Obsidian Arty
+   Applied only when viewing public collaborator cards
+   (body.dark-collab-mode, injected by JS)
+   ============================================================ */
+
+body.dark-collab-mode {
+  background: #070706;
+  color: #f0ebe0;
+}
+
+/* Hide the default warm light orbs */
+body.dark-collab-mode .bg-orb {
+  display: none;
+}
+
+/* Injected dark orbs */
+.dark-orb {
+  position: fixed;
+  z-index: -1;
+  border-radius: 999px;
+  filter: blur(90px);
+  pointer-events: none;
+}
+
+/* Hero tones toward dark */
+body.dark-collab-mode .hero__inner {
+  background: linear-gradient(130deg, #0e0c09 0%, #1a1208 100%);
+  border-color: rgba(200, 145, 26, 0.18);
+  box-shadow: 0 10px 50px rgba(200, 145, 26, 0.07);
+}
+
+body.dark-collab-mode h1,
+body.dark-collab-mode .hero__lead {
+  color: #f0ebe0;
+}
+
+body.dark-collab-mode .eyebrow {
+  color: #c8911a;
+}
+
+body.dark-collab-mode .access-bar {
+  background: rgba(255, 245, 210, 0.04);
+  border-color: rgba(200, 145, 26, 0.22);
+}
+
+body.dark-collab-mode .access-bar button {
+  background: rgba(200, 145, 26, 0.1);
+  border-color: rgba(200, 145, 26, 0.3);
+  color: #f0ebe0;
+}
+
+body.dark-collab-mode .control-toggle {
+  background: rgba(255, 245, 210, 0.03);
+  border-color: rgba(200, 145, 26, 0.2);
+  color: #f0ebe0;
+}
+
+body.dark-collab-mode input,
+body.dark-collab-mode select {
+  background: rgba(255, 245, 210, 0.04);
+  border-color: rgba(200, 145, 26, 0.22);
+  color: #f0ebe0;
+}
+
+body.dark-collab-mode label,
+body.dark-collab-mode legend {
+  color: #6b5e48;
+}
+
+body.dark-collab-mode .entity-toggle button {
+  color: #6b5e48;
+}
+
+body.dark-collab-mode .entity-toggle button.is-active {
+  color: #c8911a;
+}
+
+/* Dark mode grid for collab mode */
+body.dark-collab-mode .cards-grid {
+  gap: 1.1rem;
+}
+
+/* ---- Card archetypes ---- */
+
+/* All public cards in dark mode */
+body.dark-collab-mode .collaborator-card.public-card {
+  background: rgba(255, 245, 210, 0.035);
+  /* border is set inline per-card with random opacity */
+  box-shadow: 0 0 22px rgba(0, 0, 0, 0.55);
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+
+body.dark-collab-mode .collaborator-card.public-card:hover {
+  box-shadow: 0 0 40px rgba(200, 145, 26, 0.25);
+  transform: translateY(-2px);
+}
+
+body.dark-collab-mode .collab-info h2 {
+  color: #f0ebe0;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
+}
+
+/* FEATURED — spans 2 columns, copper glow */
+body.dark-collab-mode .collaborator-card.public-card.card--featured {
+  box-shadow: 0 0 40px rgba(139, 58, 15, 0.35), 0 0 12px rgba(0, 0, 0, 0.6);
+}
+
+body.dark-collab-mode .collaborator-card.public-card.card--featured:hover {
+  box-shadow: 0 0 60px rgba(200, 145, 26, 0.4), 0 0 20px rgba(139, 58, 15, 0.45);
+}
+
+/* SMALL — slightly reduced opacity fallback, subtle */
+body.dark-collab-mode .collaborator-card.public-card.card--small {
+  aspect-ratio: 0.9;
+  opacity: 0.92;
+}
+
+/* EDITORIAL — name can rotate (set inline), accent line, micro-flip label */
+body.dark-collab-mode .collaborator-card.public-card.card--editorial {
+  box-shadow: 0 0 30px rgba(200, 145, 26, 0.2), inset 0 0 0 1px rgba(200, 145, 26, 0.15);
+  overflow: hidden;
+}
+
+/* Editorial diagonal accent line */
+.card--editorial__accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    transparent 40%,
+    rgba(200, 145, 26, 0.12) 40%,
+    rgba(200, 145, 26, 0.12) 41%,
+    transparent 41%
+  );
+}
+
+/* Editorial upside-down micro platform label */
+.card--editorial__flip-label {
+  position: absolute;
+  top: 0.65rem;
+  left: 0.6rem;
+  z-index: 5;
+  color: rgba(200, 145, 26, 0.6);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transform: rotate(180deg);
+  writing-mode: vertical-rl;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Featured span 2 cols at 720px+ */
+@media (min-width: 720px) {
+  body.dark-collab-mode .cards-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  body.dark-collab-mode .collaborator-card.public-card.card--featured {
+    grid-column: span 2;
+  }
+}
+
+@media (min-width: 1080px) {
+  body.dark-collab-mode .cards-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+/* ============================================================
+   END DARK COLLAB MODE
+   ============================================================ */
+
