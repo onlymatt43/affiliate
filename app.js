@@ -1079,6 +1079,10 @@ function collaboratorPrivateCardMarkup(item, platformLabel, nicheLabel) {
           <span class="kit-label">Contact</span>
           <span class="kit-value">${escapeHtml(item.contact || "-")}</span>
         </div>
+        ${item.email ? `<div class="kit-row">
+          <span class="kit-label">Email</span>
+          <span class="kit-value">${escapeHtml(item.email)}</span>
+        </div>` : ""}
         <div class="kit-row">
           <span class="kit-label">Rates</span>
           <span class="kit-value">${escapeHtml(item.rates || "-")}</span>
