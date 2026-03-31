@@ -929,7 +929,7 @@ function publicCardMarkup(item, platformLabel, nicheLabel, archetype = "default"
     : "";
 
   return `
-    <article class="affiliate-card public-card card--${archetype}" style="${articleStyle}" data-id="${escapeHtml(item.id)}" data-promo-url="${escapeHtml(item.promoUrl)}" data-promo-code="${escapeHtml(item.promoCode)}">
+    <article class="affiliate-card public-card card--${archetype}" style="${articleStyle}" data-id="${escapeHtml(item.id)}" data-promo-url="${escapeHtml(item.promoUrl)}" data-promo-code="${escapeHtml(item.promoCode)}" data-social-url="${escapeHtml(item.socialUrl || "")}">
       <div class="preview-shell" data-preview-shell="${escapeHtml(item.id)}">
         <img class="preview-image is-hidden" data-preview-image="${escapeHtml(item.id)}" alt="Apercu du lien promo" loading="lazy" />
         <div class="preview-fallback" data-preview-fallback="${escapeHtml(item.id)}">Apercu lien</div>
@@ -1321,7 +1321,7 @@ function socialAvatarUrl(profileUrl) {
   return "";
 }
 
-async function hydrateCardPreviews(cards, urlField) {
+async function hydrateCardPreviews(cards, urlField, fallbackUrlField = null) {
   await Promise.all(
     cards.map(async (card) => {
       const id = card.dataset.id;
@@ -1331,6 +1331,11 @@ async function hydrateCardPreviews(cards, urlField) {
       const meta = await fetchLinkMeta(url);
       let imageUrl = meta.image;
       if (!imageUrl) imageUrl = socialAvatarUrl(url);
+      // Fallback: try the social URL (e.g. Instagram page for an affiliate)
+      if (!imageUrl && fallbackUrlField) {
+        const fallbackUrl = card.dataset[fallbackUrlField] || "";
+        if (fallbackUrl) imageUrl = socialAvatarUrl(fallbackUrl);
+      }
       if (!imageUrl) return;
 
       const img = refs.cardsGrid.querySelector(`[data-preview-image="${CSS.escape(id)}"]`);
@@ -1346,7 +1351,7 @@ async function hydrateCardPreviews(cards, urlField) {
 async function hydratePublicPreviews() {
   if (state.isUnlocked) return;
   const cards = Array.from(refs.cardsGrid.querySelectorAll(".public-card:not(.collaborator-card)"));
-  await hydrateCardPreviews(cards, "promoUrl");
+  await hydrateCardPreviews(cards, "promoUrl", "socialUrl");
   const collabCards = Array.from(refs.cardsGrid.querySelectorAll(".collaborator-card.public-card"));
   await hydrateCardPreviews(collabCards, "publicLink");
 }
