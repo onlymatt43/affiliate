@@ -900,9 +900,30 @@ function getActiveItems() {
   return isCollaboratorMode() ? state.collaborators : state.affiliates;
 }
 
-function publicCardMarkup(item, platformLabel, nicheLabel) {
+function publicCardMarkup(item, platformLabel, nicheLabel, archetype = "default") {
+  const nameSizeBase = { default: 1.24, featured: 1.75, small: 1.0, editorial: 1.5 }[archetype] || 1.24;
+  const nameSize = (nameSizeBase + randomBetween(-0.1, 0.1)).toFixed(2);
+  const fontWeight = randomPick([400, 600, 800]);
+  const letterSpacing = randomBetween(0, 0.08).toFixed(3);
+  const textTransform = randomPick(["none", "uppercase"]);
+  const nameRotation = archetype === "editorial" ? randomBetween(-6, 6).toFixed(1) : 0;
+  const borderOpacity = randomBetween(0.14, 0.38).toFixed(2);
+
+  const articleStyle = `border: 1px solid rgba(200, 145, 26, ${borderOpacity});`;
+  const nameStyle = [
+    `font-size: ${nameSize}rem`,
+    `font-weight: ${fontWeight}`,
+    `letter-spacing: ${letterSpacing}em`,
+    `text-transform: ${textTransform}`,
+    archetype === "editorial" ? `transform: rotate(${nameRotation}deg); display: inline-block;` : ""
+  ].filter(Boolean).join("; ");
+
+  const editorialAccent = archetype === "editorial"
+    ? `<span class="card--editorial__accent" aria-hidden="true"></span>`
+    : "";
+
   return `
-    <article class="affiliate-card public-card" data-id="${escapeHtml(item.id)}" data-promo-url="${escapeHtml(item.promoUrl)}" data-promo-code="${escapeHtml(item.promoCode)}">
+    <article class="affiliate-card public-card card--${archetype}" style="${articleStyle}" data-id="${escapeHtml(item.id)}" data-promo-url="${escapeHtml(item.promoUrl)}" data-promo-code="${escapeHtml(item.promoCode)}">
       <div class="preview-shell" data-preview-shell="${escapeHtml(item.id)}">
         <img class="preview-image is-hidden" data-preview-image="${escapeHtml(item.id)}" alt="Apercu du lien promo" loading="lazy" />
         <div class="preview-fallback" data-preview-fallback="${escapeHtml(item.id)}">Apercu lien</div>
@@ -910,9 +931,10 @@ function publicCardMarkup(item, platformLabel, nicheLabel) {
 
       ${logoStripMarkup(item.logos, item.name)}
 
+      ${editorialAccent}
       <div class="card-head">
         <div>
-          <h2>${escapeHtml(item.name)}</h2>
+          <h2 style="${nameStyle}">${escapeHtml(item.name)}</h2>
         </div>
       </div>
 
@@ -1234,7 +1256,8 @@ function cardMarkup(item, archetypeMap = new Map()) {
   }
 
   if (!state.isUnlocked) {
-    return publicCardMarkup(item, platformLabel, nicheLabel);
+    const archetype = archetypeMap.get(item.id) || "default";
+    return publicCardMarkup(item, platformLabel, nicheLabel, archetype);
   }
 
   return privateCardMarkup(item, platformLabel, nicheLabel);
@@ -1328,15 +1351,15 @@ function renderCards() {
   const activeItems = getActiveItems();
   state.debug.renderedCount = activeItems.length;
 
-  const isPublicCollab = isCollaboratorMode() && !state.isUnlocked;
-  if (isPublicCollab) {
+  const isPublicMode = !state.isUnlocked;
+  if (isPublicMode) {
     injectDarkBackground();
   } else {
     removeDarkBackground();
   }
 
   let archetypeMap = new Map();
-  if (isPublicCollab) {
+  if (isPublicMode) {
     assignCardArchetypes(activeItems).forEach(({ item, archetype }) => {
       archetypeMap.set(item.id, archetype);
     });
