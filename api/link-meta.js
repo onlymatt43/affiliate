@@ -1,9 +1,26 @@
 const { isAuthenticated } = require("../lib/auth");
 
 function extractMeta(html, property, attr = "property") {
-  const re = new RegExp(`<meta[^>]*${attr}=["']${property}["'][^>]*content=["']([^"']+)["'][^>]*>`, "i");
-  const match = html.match(re);
-  return match ? match[1] : "";
+  // Match <meta> regardless of attribute order (property/content can appear in any order)
+  const tagRe = /<meta(\s[^>]*)?>/gi;
+  let tag;
+  while ((tag = tagRe.exec(html)) !== null) {
+    const attrs = tag[0];
+    const propMatch = new RegExp(`${attr}=["']${property}["']`, "i").test(attrs);
+    if (!propMatch) continue;
+    const contentMatch = attrs.match(/content=["']([^"']+)["']/i);
+    if (contentMatch) return contentMatch[1];
+  }
+  return "";
+}
+
+function resolveUrl(base, relative) {
+  if (!relative) return "";
+  try {
+    return new URL(relative, base).toString();
+  } catch (_) {
+    return relative;
+  }
 }
 
 function getHost(value) {
@@ -65,10 +82,11 @@ module.exports = async function handler(req, res) {
     });
 
     const html = await response.text();
-    const image =
+    const rawImage =
       extractMeta(html, "og:image") ||
       extractMeta(html, "twitter:image", "name") ||
       "";
+    const image = resolveUrl(url.toString(), rawImage);
     const title =
       extractMeta(html, "og:title") ||
       extractMeta(html, "twitter:title", "name") ||
