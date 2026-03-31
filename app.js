@@ -972,6 +972,7 @@ function privateCardMarkup(item, platformLabel, nicheLabel) {
         <button type="button" data-action="copy-specs">Copier specs</button>
         <button type="button" data-action="edit">Modifier</button>
         <button type="button" data-action="duplicate">Dupliquer bloc</button>
+        <button type="button" data-action="generate-post" class="accent-ai">✦ Générer un post</button>
         <button type="button" data-action="copy-all" class="accent">Copier tout</button>
         <span class="copy-feedback" aria-live="polite"></span>
       </div>
@@ -1133,6 +1134,7 @@ function collaboratorPrivateCardMarkup(item, platformLabel, nicheLabel) {
         <button type="button" data-action="copy-collaboration-kit">Copier kit collaboration</button>
         <button type="button" data-action="edit">Modifier</button>
         <button type="button" data-action="duplicate">Dupliquer bloc</button>
+        <button type="button" data-action="generate-post" class="accent-ai">✦ Générer un post</button>
         <button type="button" data-action="copy-all" class="accent">Copier tout</button>
         <span class="copy-feedback" aria-live="polite"></span>
       </div>
@@ -2256,6 +2258,88 @@ function bindAccessControls() {
 }
 
 function bindCardActions() {
+  // --- AI post generation overlay ---
+  function showGeneratePostOverlay(card, item) {
+    document.querySelectorAll(".generate-post-overlay").forEach((el) => el.remove());
+
+    const overlay = document.createElement("div");
+    overlay.className = "generate-post-overlay";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.innerHTML = `
+      <div class="generate-post-overlay__inner">
+        <button type="button" class="generate-post-overlay__close" aria-label="Fermer">&times;</button>
+        <h3 class="generate-post-overlay__title">✦ Générer un post</h3>
+        <div class="generate-post-overlay__langs">
+          <button type="button" class="generate-post-overlay__lang-btn is-active" data-lang="fr">FR</button>
+          <button type="button" class="generate-post-overlay__lang-btn" data-lang="en">EN</button>
+        </div>
+        <div class="generate-post-overlay__loading is-hidden">Génération en cours...</div>
+        <textarea class="generate-post-overlay__result" placeholder="Le post généré apparaîtra ici..." rows="8" readonly></textarea>
+        <div class="generate-post-overlay__actions">
+          <button type="button" class="generate-post-overlay__generate-btn accent-ai">Générer</button>
+          <button type="button" class="generate-post-overlay__copy-btn" disabled>Copier</button>
+        </div>
+      </div>
+    `;
+
+    let activeLang = "fr";
+
+    const closeBtn = overlay.querySelector(".generate-post-overlay__close");
+    const langBtns = overlay.querySelectorAll(".generate-post-overlay__lang-btn");
+    const loadingEl = overlay.querySelector(".generate-post-overlay__loading");
+    const resultEl = overlay.querySelector(".generate-post-overlay__result");
+    const generateBtn = overlay.querySelector(".generate-post-overlay__generate-btn");
+    const copyBtn = overlay.querySelector(".generate-post-overlay__copy-btn");
+
+    closeBtn.addEventListener("click", () => overlay.remove());
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+
+    langBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        langBtns.forEach((b) => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        activeLang = btn.dataset.lang;
+      });
+    });
+
+    generateBtn.addEventListener("click", async () => {
+      loadingEl.classList.remove("is-hidden");
+      resultEl.value = "";
+      copyBtn.disabled = true;
+      generateBtn.disabled = true;
+
+      try {
+        const res = await fetch("/api/generate-post", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ item, lang: activeLang })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || "Erreur");
+        resultEl.value = data.post;
+        copyBtn.disabled = false;
+      } catch (err) {
+        resultEl.value = "Erreur : " + err.message;
+      } finally {
+        loadingEl.classList.add("is-hidden");
+        generateBtn.disabled = false;
+      }
+    });
+
+    copyBtn.addEventListener("click", () => {
+      copyText(resultEl.value).then(() => {
+        const orig = copyBtn.textContent;
+        copyBtn.textContent = "Copié !";
+        setTimeout(() => { copyBtn.textContent = orig; }, 1500);
+      });
+    });
+
+    document.body.appendChild(overlay);
+    generateBtn.click(); // auto-generate on open
+  }
+
   refs.cardsGrid.addEventListener("click", async (event) => {
     if (!state.isUnlocked) {
       if (isCollaboratorMode()) {
@@ -2334,6 +2418,12 @@ function bindCardActions() {
           return;
         }
 
+        if (action === "generate-post") {
+          const collaborator = findCollaboratorById(card.dataset.id || "");
+          if (collaborator) showGeneratePostOverlay(card, collaborator);
+          return;
+        }
+
         await copyText(getCopyAllText(card));
         setFeedback(card, "Bloc complet copie");
         return;
@@ -2386,6 +2476,12 @@ function bindCardActions() {
       if (action === "duplicate") {
         duplicateCard(card);
         setFeedback(card, "Bloc duplique");
+        return;
+      }
+
+      if (action === "generate-post") {
+        const affiliate = findAffiliateById(card.dataset.id || "");
+        if (affiliate) showGeneratePostOverlay(card, affiliate);
         return;
       }
 

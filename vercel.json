@@ -13,6 +13,7 @@
     { "source": "/api/collaborators-upsert", "destination": "/api/collaborators?op=upsert" },
     { "source": "/api/collaborators-bulk-upsert", "destination": "/api/collaborators?op=bulk-upsert" },
     { "source": "/api/collaborators-replace", "destination": "/api/collaborators?op=replace" },
-    { "source": "/api/collaborators-clear", "destination": "/api/collaborators?op=clear" }
+    { "source": "/api/collaborators-clear", "destination": "/api/collaborators?op=clear" },
+    { "source": "/api/generate-post", "destination": "/api/generate-post" }
   ]
 }

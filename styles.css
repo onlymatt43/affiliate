@@ -866,6 +866,114 @@ textarea:focus {
 }
 /* --- end Twitter auth overlay --- */
 
+/* --- AI generate post overlay --- */
+.generate-post-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.generate-post-overlay__inner {
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  position: relative;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+}
+.generate-post-overlay__close {
+  position: absolute;
+  top: 0.8rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: #999;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+}
+.generate-post-overlay__close:hover { color: #333; }
+.generate-post-overlay__title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  padding-right: 2rem;
+}
+.generate-post-overlay__langs {
+  display: flex;
+  gap: 0.5rem;
+}
+.generate-post-overlay__lang-btn {
+  padding: 0.25rem 0.8rem;
+  border-radius: 999px;
+  border: 1.5px solid #ddd;
+  background: #f5f5f5;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #555;
+}
+.generate-post-overlay__lang-btn.is-active {
+  border-color: #c8860a;
+  background: #fff8ee;
+  color: #c8860a;
+}
+.generate-post-overlay__loading {
+  font-size: 0.85rem;
+  color: #888;
+  font-style: italic;
+}
+.generate-post-overlay__result {
+  width: 100%;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  font-family: inherit;
+  resize: vertical;
+  color: #222;
+  box-sizing: border-box;
+}
+.generate-post-overlay__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.accent-ai {
+  background: linear-gradient(135deg, #c8860a, #e8a020);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.accent-ai:hover { opacity: 0.88; }
+.accent-ai:disabled { opacity: 0.5; cursor: default; }
+.generate-post-overlay__copy-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1.5px solid #ddd;
+  background: #f5f5f5;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #444;
+}
+.generate-post-overlay__copy-btn:disabled { opacity: 0.4; cursor: default; }
+/* --- end AI generate post overlay --- */
+
 .preview-shell {
   border: 1px solid #ead5b7;
   border-radius: 12px;
