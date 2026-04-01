@@ -1214,13 +1214,14 @@ async function fetchLinkMeta(url) {
     const payload = await response.json();
     const value = {
       image: toText(payload.image),
+      siteLogo: toText(payload.siteLogo),
       title: toText(payload.title),
       description: toText(payload.description)
     };
     metaCache.set(url, value);
     return value;
   } catch (error) {
-    const fallback = { image: "", title: "", description: "" };
+    const fallback = { image: "", siteLogo: "", title: "", description: "" };
     metaCache.set(url, fallback);
     return fallback;
   }
@@ -1246,16 +1247,27 @@ async function hydrateCardPreviews(cards, urlField, fallbackUrlField = null) {
     cards.map(async (card) => {
       const id = card.dataset.id;
       const url = card.dataset[urlField] || "";
+      const isAffiliate = card.dataset.category === "affiliate";
       if (!id || !url) return;
 
       const meta = await fetchLinkMeta(url);
-      let imageUrl = meta.image || socialAvatarUrl(url);
+      let imageUrl = "";
+
+      if (isAffiliate) {
+        imageUrl = meta.image || meta.siteLogo;
+      } else {
+        imageUrl = meta.image || socialAvatarUrl(url);
+      }
 
       if (!imageUrl && fallbackUrlField) {
         const fallbackUrl = card.dataset[fallbackUrlField] || "";
         if (fallbackUrl) {
           const fallbackMeta = await fetchLinkMeta(fallbackUrl);
-          imageUrl = fallbackMeta.image || socialAvatarUrl(fallbackUrl);
+          if (isAffiliate) {
+            imageUrl = fallbackMeta.image || fallbackMeta.siteLogo;
+          } else {
+            imageUrl = fallbackMeta.image || socialAvatarUrl(fallbackUrl);
+          }
         }
       }
 
@@ -1307,49 +1319,73 @@ function renderCards() {
 }
 
 function mergeAffiliates() {
-  const byId = new Map();
-  const ordered = [];
-
-  state.baseAffiliates.forEach((item) => {
-    byId.set(item.id, ordered.length);
-    ordered.push(item);
-  });
-
-  state.localAffiliates.forEach((item) => {
-    const existingIndex = byId.get(item.id);
-    if (typeof existingIndex === "number") {
-      ordered[existingIndex] = item;
-      return;
-    }
-
-    byId.set(item.id, ordered.length);
-    ordered.push(item);
-  });
-
-  state.affiliates = ordered;
+  state.affiliates = mergeEntityLists(state.baseAffiliates, state.localAffiliates, affiliateMergeKeys);
 }
 
 function mergeCollaborators() {
-  const byId = new Map();
+  state.collaborators = mergeEntityLists(state.baseCollaborators, state.localCollaborators, collaboratorMergeKeys);
+}
+
+function normalizeKeyPart(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function affiliateMergeKeys(item) {
+  const keys = [];
+  const id = normalizeKeyPart(item.id);
+  if (id) keys.push(`id:${id}`);
+
+  const name = normalizeKeyPart(item.name);
+  const platform = normalizeKeyPart(item.platform);
+  if (name || platform) keys.push(`np:${name}|${platform}`);
+
+  const promoUrl = normalizeKeyPart(item.promoUrl);
+  if (promoUrl) keys.push(`url:${promoUrl}`);
+
+  return keys;
+}
+
+function collaboratorMergeKeys(item) {
+  const keys = [];
+  const id = normalizeKeyPart(item.id);
+  if (id) keys.push(`id:${id}`);
+
+  const publicLink = normalizeKeyPart(item.publicLink);
+  if (publicLink) keys.push(`url:${publicLink}`);
+
+  const name = normalizeKeyPart(item.name);
+  const platform = normalizeKeyPart(item.platform);
+  if (name || platform) keys.push(`np:${name}|${platform}`);
+
+  return keys;
+}
+
+function mergeEntityLists(baseItems, localItems, keyFn) {
+  const keyToIndex = new Map();
   const ordered = [];
 
-  state.baseCollaborators.forEach((item) => {
-    byId.set(item.id, ordered.length);
-    ordered.push(item);
-  });
+  function upsert(item) {
+    const keys = keyFn(item);
+    let existingIndex = -1;
 
-  state.localCollaborators.forEach((item) => {
-    const existingIndex = byId.get(item.id);
-    if (typeof existingIndex === "number") {
-      ordered[existingIndex] = item;
-      return;
+    for (const key of keys) {
+      if (keyToIndex.has(key)) {
+        existingIndex = keyToIndex.get(key);
+        break;
+      }
     }
 
-    byId.set(item.id, ordered.length);
-    ordered.push(item);
-  });
+    const targetIndex = existingIndex >= 0 ? existingIndex : ordered.length;
+    ordered[targetIndex] = item;
 
-  state.collaborators = ordered;
+    for (const key of keys) {
+      keyToIndex.set(key, targetIndex);
+    }
+  }
+
+  (baseItems || []).forEach(upsert);
+  (localItems || []).forEach(upsert);
+  return ordered.filter(Boolean);
 }
 
 function affiliateDedupKey(item) {

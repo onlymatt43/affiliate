@@ -14,6 +14,38 @@ function extractMeta(html, property, attr = "property") {
   return "";
 }
 
+function extractLinkIcon(html) {
+  const tagRe = /<link(\s[^>]*)?>/gi;
+  const priority = ["apple-touch-icon", "icon", "shortcut icon"];
+  let best = "";
+  let bestScore = Infinity;
+
+  let tag;
+  while ((tag = tagRe.exec(html)) !== null) {
+    const attrs = tag[0];
+    const relMatch = attrs.match(/rel=["']([^"']+)["']/i);
+    if (!relMatch) continue;
+    const relValue = relMatch[1].toLowerCase();
+
+    const hrefMatch = attrs.match(/href=["']([^"']+)["']/i);
+    if (!hrefMatch) continue;
+    const href = String(hrefMatch[1] || "").trim();
+    if (!href) continue;
+
+    for (let i = 0; i < priority.length; i += 1) {
+      if (relValue.includes(priority[i])) {
+        if (i < bestScore) {
+          bestScore = i;
+          best = href;
+        }
+        break;
+      }
+    }
+  }
+
+  return best;
+}
+
 function resolveUrl(base, relative) {
   if (!relative) return "";
   try {
@@ -29,6 +61,12 @@ function getHost(value) {
   } catch (error) {
     return "";
   }
+}
+
+function buildDomainLogoUrl(value) {
+  const host = getHost(value);
+  if (!host) return "";
+  return `https://icons.duckduckgo.com/ip3/${encodeURIComponent(host)}.ico`;
 }
 
 function isUnsafeHost(host) {
@@ -91,7 +129,9 @@ module.exports = async function handler(req, res) {
       extractMeta(html, "og:image") ||
       extractMeta(html, "twitter:image", "name") ||
       "";
+    const rawIcon = extractLinkIcon(html) || "/favicon.ico";
     const image = resolveUrl(url.toString(), rawImage);
+    const siteLogo = resolveUrl(url.toString(), rawIcon) || buildDomainLogoUrl(url.toString());
     const title =
       extractMeta(html, "og:title") ||
       extractMeta(html, "twitter:title", "name") ||
@@ -104,10 +144,11 @@ module.exports = async function handler(req, res) {
     res.status(200).json({
       ok: true,
       image,
+      siteLogo,
       title,
       description: includeDescription ? description : ""
     });
   } catch (error) {
-    res.status(200).json({ ok: true, image: "", title: "", description: "" });
+    res.status(200).json({ ok: true, image: "", siteLogo: buildDomainLogoUrl(url.toString()), title: "", description: "" });
   }
 };
