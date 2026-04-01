@@ -35,10 +35,12 @@
     { "source": "/api/affiliates-upsert", "destination": "/api/affiliates?op=upsert" },
     { "source": "/api/affiliates-bulk-upsert", "destination": "/api/affiliates?op=bulk-upsert" },
     { "source": "/api/affiliates-replace", "destination": "/api/affiliates?op=replace" },
+    { "source": "/api/affiliates-delete", "destination": "/api/affiliates?op=delete" },
     { "source": "/api/affiliates-clear", "destination": "/api/affiliates?op=clear" },
     { "source": "/api/collaborators-upsert", "destination": "/api/collaborators?op=upsert" },
     { "source": "/api/collaborators-bulk-upsert", "destination": "/api/collaborators?op=bulk-upsert" },
     { "source": "/api/collaborators-replace", "destination": "/api/collaborators?op=replace" },
+    { "source": "/api/collaborators-delete", "destination": "/api/collaborators?op=delete" },
     { "source": "/api/collaborators-clear", "destination": "/api/collaborators?op=clear" },
     { "source": "/api/generate-post", "destination": "/api/generate-post" }
   ]

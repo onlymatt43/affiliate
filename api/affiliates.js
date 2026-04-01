@@ -3,6 +3,7 @@ const {
   upsertAffiliate,
   bulkUpsertAffiliates,
   replaceAllAffiliates,
+  deleteAffiliate,
   clearAffiliates
 } = require("../lib/affiliates-store");
 const { isAuthenticated } = require("../lib/auth");
@@ -70,6 +71,17 @@ module.exports = async function handler(req, res) {
 
     if (op === "clear") {
       await clearAffiliates();
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    if (op === "delete") {
+      const id = String(req.body?.id || "").trim();
+      if (!id) {
+        res.status(400).json({ ok: false, error: "Missing id" });
+        return;
+      }
+      await deleteAffiliate(id);
       res.status(200).json({ ok: true });
       return;
     }

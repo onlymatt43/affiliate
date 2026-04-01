@@ -3,6 +3,7 @@ const {
   upsertCollaborator,
   bulkUpsertCollaborators,
   replaceAllCollaborators,
+  deleteCollaborator,
   clearCollaborators
 } = require("../lib/collaborators-store");
 const { isAuthenticated } = require("../lib/auth");
@@ -87,6 +88,17 @@ module.exports = async function handler(req, res) {
 
     if (op === "clear") {
       await clearCollaborators();
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    if (op === "delete") {
+      const id = String(req.body?.id || "").trim();
+      if (!id) {
+        res.status(400).json({ ok: false, error: "Missing id" });
+        return;
+      }
+      await deleteCollaborator(id);
       res.status(200).json({ ok: true });
       return;
     }

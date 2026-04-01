@@ -107,10 +107,20 @@ RÈGLES:
 }
 [/EXTRACTED]
 
-6. Tu peux continuer la conversation après avoir émis le bloc (poser des questions pour raffiner).
-7. Si l'utilisateur demande de générer un post après la saisie, réponds en mode créatif avec le ton décrit ici: ${VOICE_GUIDE}
-8. Réponds toujours en français sauf si l'utilisateur écrit en anglais.
-9. Sois bref et direct. Pas de longues explications.`;
+6. Si l'utilisateur demande de SUPPRIMER une fiche existante, confirme le nom et l'id, puis émets:
+
+[DELETE]
+{
+  "entityType": "affiliate" | "collaborator",
+  "id": "id-de-la-fiche",
+  "name": "nom-de-la-fiche"
+}
+[/DELETE]
+
+7. Tu peux continuer la conversation après avoir émis le bloc (poser des questions pour raffiner).
+8. Si l'utilisateur demande de générer un post après la saisie, réponds en mode créatif avec le ton décrit ici: ${VOICE_GUIDE}
+9. Réponds toujours en français sauf si l'utilisateur écrit en anglais.
+10. Sois bref et direct. Pas de longues explications.`;
 }
 
 module.exports = async function handler(req, res) {
@@ -201,6 +211,7 @@ module.exports = async function handler(req, res) {
 
     // Parse [EXTRACTED]...[/EXTRACTED] block for intake mode
     let extracted = null;
+    let deleteRequest = null;
     let message = rawContent;
 
     if (mode === "intake") {
@@ -211,15 +222,25 @@ module.exports = async function handler(req, res) {
         } catch (_) {
           extracted = null;
         }
-        // Strip the block from the visible message
-        message = rawContent.replace(/\[EXTRACTED\][\s\S]*?\[\/EXTRACTED\]/g, "").trim();
       }
+
+      const deleteMatch = rawContent.match(/\[DELETE\]([\s\S]*?)\[\/DELETE\]/);
+      if (deleteMatch) {
+        try {
+          deleteRequest = JSON.parse(deleteMatch[1].trim());
+        } catch (_) {
+          deleteRequest = null;
+        }
+      }
+
+      // Strip blocks from the visible message
+      message = rawContent.replace(/\[EXTRACTED\][\s\S]*?\[\/EXTRACTED\]/g, "").replace(/\[DELETE\][\s\S]*?\[\/DELETE\]/g, "").trim();
     }
 
     if (mode === "post") {
       res.status(200).json({ ok: true, post: rawContent, message: rawContent });
     } else {
-      res.status(200).json({ ok: true, message, extracted });
+      res.status(200).json({ ok: true, message, extracted, deleteRequest });
     }
   } catch (err) {
     console.error("[ai-assistant] Assistant request failed", { message: String(err?.message || err) });

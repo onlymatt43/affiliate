@@ -1970,6 +1970,14 @@ async function remoteClearAllCollaborators() {
   await postJson("/api/collaborators-clear", {});
 }
 
+async function remoteDeleteAffiliate(id) {
+  await postJson("/api/affiliates-delete", { id });
+}
+
+async function remoteDeleteCollaborator(id) {
+  await postJson("/api/collaborators-delete", { id });
+}
+
 async function syncPendingLocalData() {
   if (!state.isUnlocked) return;
   let syncedCount = 0;
@@ -2588,6 +2596,39 @@ function showAIAssistantOverlay(item, mode) {
       thread.scrollTop = thread.scrollHeight;
     }
 
+    function appendDeleteBlock(deleteReq) {
+      const block = document.createElement("div");
+      block.className = "ai-overlay__extracted";
+
+      const typeLabel = deleteReq.entityType === "affiliate" ? "Affilié" : "Collaborateur";
+
+      block.innerHTML = `
+        <div class="ai-overlay__extracted-header">Supprimer ${escapeHtml(typeLabel)}: ${escapeHtml(deleteReq.name || deleteReq.id)}</div>
+        <button type="button" class="ai-overlay__apply-btn" style="background:#c0392b;color:#fff;">Confirmer la suppression</button>
+      `;
+
+      block.querySelector(".ai-overlay__apply-btn").addEventListener("click", async () => {
+        try {
+          if (deleteReq.entityType === "collaborator") {
+            await remoteDeleteCollaborator(deleteReq.id);
+            await loadCollaborators();
+          } else {
+            await remoteDeleteAffiliate(deleteReq.id);
+            await loadAffiliates();
+          }
+          mergeAllItems();
+          renderCards();
+          refreshCategoryChips();
+          block.innerHTML = `<div class="ai-overlay__extracted-header">✓ ${escapeHtml(deleteReq.name || deleteReq.id)} supprimé</div>`;
+        } catch (err) {
+          block.innerHTML = `<div class="ai-overlay__extracted-header">Erreur : ${escapeHtml(err.message)}</div>`;
+        }
+      });
+
+      thread.appendChild(block);
+      thread.scrollTop = thread.scrollHeight;
+    }
+
     function setBusy(busy) {
       isBusy = busy;
       sendBtn.disabled = busy;
@@ -2648,6 +2689,10 @@ function showAIAssistantOverlay(item, mode) {
 
         if (mode === "intake" && data.extracted) {
           appendExtractedBlock(data.extracted);
+        }
+
+        if (mode === "intake" && data.deleteRequest) {
+          appendDeleteBlock(data.deleteRequest);
         }
       } catch (err) {
         setBusy(false);
