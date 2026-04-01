@@ -1523,16 +1523,9 @@ function populateFormFromAffiliate(affiliate) {
   form.elements.logo2.value = affiliate.logos?.[1] || "";
   form.elements.logo3.value = affiliate.logos?.[2] || "";
   form.elements.mentions.value = affiliate.mentions || "";
-  form.elements.platform.value = affiliate.platform || "x";
-  form.elements.niche.value = affiliate.niche || "lifestyle";
-  form.elements.format.value = affiliate.format || "short-video";
-  form.elements.tone.value = affiliate.tone || "authority";
-  form.elements.frTags.value = affiliate.fr?.tags || "";
-  form.elements.enTags.value = affiliate.en?.tags || "";
-  form.elements.frSpecs.value = affiliate.fr?.specs || "";
-  form.elements.enSpecs.value = affiliate.en?.specs || "";
-  form.elements.frCaption.value = affiliate.fr?.caption || "";
-  form.elements.enCaption.value = affiliate.en?.caption || "";
+  form.elements.tags.value = affiliate.fr?.tags || affiliate.en?.tags || "";
+  form.elements.specs.value = affiliate.fr?.specs || affiliate.en?.specs || "";
+  form.elements.caption.value = affiliate.fr?.caption || affiliate.en?.caption || "";
   form.elements.postRequirements.value = affiliate.postRequirements || "";
   form.elements.specificities.value = affiliate.specificities || "";
   form.elements.mediaImages.value = (affiliate.mediaImages || []).join("\n");
@@ -1557,16 +1550,9 @@ function populateFormFromCollaborator(collaborator) {
   form.elements.logo1.value = collaborator.logos?.[0] || "";
   form.elements.logo2.value = collaborator.logos?.[1] || "";
   form.elements.logo3.value = collaborator.logos?.[2] || "";
-  form.elements.platform.value = collaborator.platform || "x";
-  form.elements.niche.value = collaborator.niche || "lifestyle";
-  form.elements.format.value = collaborator.format || "short-video";
-  form.elements.tone.value = collaborator.tone || "authority";
-  form.elements.frTags.value = collaborator.fr?.tags || "";
-  form.elements.enTags.value = collaborator.en?.tags || "";
-  form.elements.frSpecs.value = collaborator.fr?.specs || "";
-  form.elements.enSpecs.value = collaborator.en?.specs || "";
-  form.elements.frCaption.value = collaborator.fr?.caption || "";
-  form.elements.enCaption.value = collaborator.en?.caption || "";
+  form.elements.tags.value = collaborator.fr?.tags || collaborator.en?.tags || "";
+  form.elements.specs.value = collaborator.fr?.specs || collaborator.en?.specs || "";
+  form.elements.caption.value = collaborator.fr?.caption || collaborator.en?.caption || "";
   form.elements.mediaImages.value = (collaborator.mediaImages || []).join("\n");
   form.elements.mediaVideos.value = (collaborator.mediaVideos || []).join("\n");
 
@@ -1838,14 +1824,14 @@ function buildAffiliateFromForm(formData) {
     postRequirements: toText(formData.get("postRequirements")),
     specificities: toText(formData.get("specificities")),
     fr: {
-      tags: toText(formData.get("frTags")),
-      specs: toText(formData.get("frSpecs")),
-      caption: toText(formData.get("frCaption"))
+      tags: toText(formData.get("tags")),
+      specs: toText(formData.get("specs")),
+      caption: toText(formData.get("caption"))
     },
     en: {
-      tags: toText(formData.get("enTags")),
-      specs: toText(formData.get("enSpecs")),
-      caption: toText(formData.get("enCaption"))
+      tags: toText(formData.get("tags")),
+      specs: toText(formData.get("specs")),
+      caption: toText(formData.get("caption"))
     }
   };
 
@@ -1897,14 +1883,14 @@ function buildCollaboratorFromForm(formData) {
     mediaImages: toText(formData.get("mediaImages")),
     mediaVideos: toText(formData.get("mediaVideos")),
     fr: {
-      tags: toText(formData.get("frTags")),
-      specs: toText(formData.get("frSpecs")),
-      caption: toText(formData.get("frCaption"))
+      tags: toText(formData.get("tags")),
+      specs: toText(formData.get("specs")),
+      caption: toText(formData.get("caption"))
     },
     en: {
-      tags: toText(formData.get("enTags")),
-      specs: toText(formData.get("enSpecs")),
-      caption: toText(formData.get("enCaption"))
+      tags: toText(formData.get("tags")),
+      specs: toText(formData.get("specs")),
+      caption: toText(formData.get("caption"))
     }
   };
 
