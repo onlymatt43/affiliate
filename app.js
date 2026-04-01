@@ -1247,7 +1247,7 @@ async function hydrateCardPreviews(cards, urlField, fallbackUrlField = null) {
     cards.map(async (card) => {
       const id = card.dataset.id;
       const url = card.dataset[urlField] || "";
-      const isAffiliate = card.dataset.category === "affiliate";
+      const isAffiliate = !Boolean(card.dataset.publicLink);
       if (!id || !url) return;
 
       const meta = await fetchLinkMeta(url);
@@ -2097,7 +2097,7 @@ function getCardMeta(card) {
 }
 
 function getAffiliationKitText(card) {
-  const isCollab = card.dataset.category !== "affiliate" && Boolean(card.dataset.publicLink);
+  const isCollab = Boolean(card.dataset.publicLink);
   if (isCollab) {
     const meta = getCardMeta(card);
     return [
@@ -2122,7 +2122,7 @@ function getAffiliationKitText(card) {
 }
 
 function getCopyAllText(card) {
-  const isCollab = card.dataset.category !== "affiliate" && Boolean(card.dataset.publicLink);
+  const isCollab = Boolean(card.dataset.publicLink);
   if (isCollab) {
     const { name, platform, niche, publicLink, privateLinks, contact, rates, booking, logos } = getCardMeta(card);
     const tags = getCopyText(card, "tags");
@@ -2213,7 +2213,7 @@ function applyEntityMode() {
 }
 
 function applyCategoryToForm(categoryValue) {
-  const isCollab = categoryValue !== "affiliate";
+  const isCollab = categoryValue === "collaborator";
   document.querySelectorAll(".form-affiliate-only").forEach((el) => {
     el.classList.toggle("is-hidden", isCollab);
   });
@@ -2897,7 +2897,7 @@ function bindComposerActions() {
   if (fSourceNotes) {
     fSourceNotes.addEventListener("blur", () => {
       const fCategory = document.getElementById("fCategory");
-      const isCollabForm = fCategory ? fCategory.value !== "affiliate" : false;
+      const isCollabForm = fCategory ? fCategory.value === "collaborator" : false;
       if (!isCollabForm) return;
       const source = fSourceNotes.value.trim();
       if (!source) return;
@@ -2944,7 +2944,7 @@ function bindComposerActions() {
       const fCategoryEl = document.getElementById("fCategory");
       const savingAsCollab = state.editingCollaboratorId
         ? true
-        : (state.editingAffiliateId ? false : fCategoryEl?.value !== "affiliate");
+        : (state.editingAffiliateId ? false : fCategoryEl?.value === "collaborator");
 
       if (savingAsCollab) {
         const collaborator = buildCollaboratorFromForm(formData);
