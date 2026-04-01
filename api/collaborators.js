@@ -6,6 +6,7 @@ const {
   clearCollaborators
 } = require("../lib/collaborators-store");
 const { isAuthenticated } = require("../lib/auth");
+const { enforceRateLimit, enforcePayloadLimit } = require("../lib/request-guards");
 
 const PUBLIC_FIELDS = new Set(["id", "name", "publicLink", "publicLinks", "logos", "contact", "platform"]);
 
@@ -55,6 +56,9 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  if (await enforceRateLimit(req, res, { name: "collaborators-write", limit: 120, windowMs: 5 * 60 * 1000 })) return;
+  if (enforcePayloadLimit(req, res, 1024 * 1024)) return;
+
   if (!isAuthenticated(req)) {
     res.status(401).json({ ok: false, error: "Unauthorized" });
     return;
@@ -90,6 +94,7 @@ module.exports = async function handler(req, res) {
     res.status(400).json({ ok: false, error: "Missing or invalid op" });
   } catch (error) {
     const message = String(error?.message || "");
+    console.error("[collaborators] Operation failed", { op, message });
     if (message.includes("not configured")) {
       res.status(501).json({ ok: false, error: "Turso not configured" });
       return;

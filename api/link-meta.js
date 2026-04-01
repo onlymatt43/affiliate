@@ -78,7 +78,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const response = await fetch(url.toString(), {
-      headers: { "User-Agent": "affiliate-hub/1.0 (+https://affiliates.onlymatt.ca)" }
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" }
     });
 
     if (!response.ok) {

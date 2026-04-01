@@ -6,6 +6,7 @@ const {
   clearAffiliates
 } = require("../lib/affiliates-store");
 const { isAuthenticated } = require("../lib/auth");
+const { enforceRateLimit, enforcePayloadLimit } = require("../lib/request-guards");
 
 function getOp(req) {
   const raw = req.query?.op;
@@ -37,6 +38,9 @@ module.exports = async function handler(req, res) {
     res.status(405).json({ ok: false, error: "Method not allowed" });
     return;
   }
+
+  if (await enforceRateLimit(req, res, { name: "affiliates-write", limit: 120, windowMs: 5 * 60 * 1000 })) return;
+  if (enforcePayloadLimit(req, res, 1024 * 1024)) return;
 
   if (!isAuthenticated(req)) {
     res.status(401).json({ ok: false, error: "Unauthorized" });
@@ -73,6 +77,7 @@ module.exports = async function handler(req, res) {
     res.status(400).json({ ok: false, error: "Missing or invalid op" });
   } catch (error) {
     const message = String(error?.message || "");
+    console.error("[affiliates] Operation failed", { op, message });
     if (message.includes("not configured")) {
       res.status(501).json({ ok: false, error: "Turso not configured" });
       return;

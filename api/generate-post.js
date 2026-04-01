@@ -1,10 +1,14 @@
 const { isAuthenticated } = require("../lib/auth");
+const { enforceRateLimit, enforcePayloadLimit } = require("../lib/request-guards");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ ok: false, error: "Method not allowed" });
     return;
   }
+
+  if (await enforceRateLimit(req, res, { name: "generate-post", limit: 50, windowMs: 5 * 60 * 1000 })) return;
+  if (enforcePayloadLimit(req, res, 256 * 1024)) return;
 
   if (!isAuthenticated(req)) {
     res.status(401).json({ ok: false, error: "Unauthorized" });
@@ -102,6 +106,7 @@ Format: ${item.format || "short-video"}. Maximum 300 mots.`;
 
     res.status(200).json({ ok: true, post });
   } catch (err) {
+    console.error("[generate-post] OpenAI request failed", { message: String(err?.message || err) });
     res.status(500).json({ ok: false, error: err.message || "Generation failed" });
   }
 };

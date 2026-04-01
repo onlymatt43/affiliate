@@ -1,3 +1,6 @@
+const isLocalDebugHost = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+const enableDebug = isLocalDebugHost && new URLSearchParams(window.location.search).get("debug") === "1";
+
 const state = {
   activeEntity: "affiliates",
   activeCategory: "all",
@@ -6,7 +9,7 @@ const state = {
   isUnlocked: false,
   authMode: "api",
   debug: {
-    enabled: new URLSearchParams(window.location.search).get("debug") === "1",
+    enabled: enableDebug,
     loadSourceAffiliates: "unknown",
     loadSourceCollaborators: "unknown",
     loadErrorAffiliates: "",
@@ -71,7 +74,7 @@ const LOCAL_STORAGE_KEY = "affiliateHubLocalAffiliates";
 const COLLABORATOR_LOCAL_STORAGE_KEY = "affiliateHubLocalCollaborators";
 const VIEW_MODE_STORAGE_KEY = "affiliateHubViewMode";
 const AUTO_EXPORT_STORAGE_KEY = "affiliateHubAutoExportLocal";
-const API_ONLY_TESTING = true;
+const API_ONLY_TESTING = false;
 
 // --- Arty dark mode helpers ---
 function randomBetween(min, max) {
@@ -152,7 +155,8 @@ function updateDebugInfo() {
 const PLATFORM_LABELS = {
   instagram: "Instagram",
   tiktok: "TikTok",
-  x: "X"
+  x: "X",
+  onlyfans: "OnlyFans"
 };
 
 const NICHE_LABELS = {
@@ -189,6 +193,16 @@ function isValidHttpUrl(value) {
     return parsed.protocol === "http:" || parsed.protocol === "https:";
   } catch (error) {
     return false;
+  }
+}
+
+async function fetchWithTimeout(url, options, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...(options || {}), signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -238,9 +252,9 @@ function normalizeAffiliateShape(raw, index) {
   }
 
   const name = toText(raw.name) || `Affiliation ${index + 1}`;
-  const platform = toText(raw.platform) || "instagram";
-  const niche = toText(raw.niche) || "business";
-  const format = toText(raw.format) || "short-video";
+  const platform = toText(raw.platform) || "x";
+  const niche = toText(raw.niche) || "lifestyle";
+  const format = toText(raw.format) || "post";
   const tone = toText(raw.tone) || "authority";
 
   const promoUrlRaw = toText(raw.promoUrl || raw.contactUrl);
@@ -710,7 +724,7 @@ function titleCaseWords(value) {
 function cleanDetectedUrl(value) {
   const trimmed = toText(value).replace(/[),.;]+$/g, "");
   if (!trimmed) return "";
-  if (/^(?:t\.me|x\.com|twitter\.com|instagram\.com|tiktok\.com)\//i.test(trimmed)) {
+  if (/^(?:t\.me|x\.com|twitter\.com)\//.test(trimmed)) {
     return `https://${trimmed}`;
   }
   return trimmed;
@@ -721,7 +735,7 @@ function extractUrlCandidates(rawText) {
   const seen = new Set();
   const patterns = [
     /https?:\/\/[^\s<>"]+/gi,
-    /\b(?:t\.me|x\.com|twitter\.com|instagram\.com|tiktok\.com)\/[^\s<>"]+/gi
+    /\b(?:t\.me|x\.com|twitter\.com)\/[^\s<>"]+/gi
   ];
 
   patterns.forEach((pattern) => {
@@ -774,7 +788,7 @@ function extractCollaboratorInsights(rawText) {
   const publicLink = urls.find((url) => {
     try {
       const hostname = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
-      return ["x.com", "twitter.com", "instagram.com", "tiktok.com"].includes(hostname);
+      return ["x.com", "twitter.com"].includes(hostname);
     } catch (error) {
       return false;
     }
@@ -845,9 +859,9 @@ function normalizeCollaboratorShape(raw, index) {
     throw new Error(`Element ${index + 1}: publicLink invalide`);
   }
 
-  const platform = toText(raw.platform) || "instagram";
-  const niche = toText(raw.niche) || "business";
-  const format = toText(raw.format) || "short-video";
+  const platform = toText(raw.platform) || "x";
+  const niche = toText(raw.niche) || "lifestyle";
+  const format = toText(raw.format) || "post";
   const tone = toText(raw.tone) || "authority";
   const fr = raw.fr || {};
   const en = raw.en || {};
@@ -994,7 +1008,7 @@ function publicCardMarkup(item, archetype = "default") {
       style="${articleStyle}"
       data-id="${escapeHtml(item.id)}"
       data-category="${escapeHtml(item.category || (isCollabType ? "collaborator" : "affiliate"))}"
-      ${isCollabType ? `data-collab-id="${escapeHtml(item.id)}" data-public-link="${escapeHtml(item.publicLink)}"` : `data-promo-url="${escapeHtml(item.promoUrl)}" data-promo-code="${escapeHtml(item.promoCode)}" data-social-url="${escapeHtml(item.socialUrl || "")}"`}
+      ${isCollabType ? `data-collab-id="${escapeHtml(item.id)}" data-public-link="${escapeHtml(item.publicLink)}" data-primary-url="${escapeHtml(item.publicLink)}"` : `data-promo-url="${escapeHtml(item.promoUrl)}" data-promo-code="${escapeHtml(item.promoCode)}" data-social-url="${escapeHtml(item.socialUrl || "")}" data-primary-url="${escapeHtml(item.promoUrl)}" data-fallback-url="${escapeHtml(item.socialUrl || "")}"`}
       data-booking-ts="${bookingTs || ""}"
       tabindex="0">
       ${bookingBadge}
@@ -1061,6 +1075,7 @@ function privateCardMarkup(item) {
     `;
     var cardDataAttrs = `data-collab-id="${escapeHtml(item.id)}"
       data-public-link="${escapeHtml(item.publicLink)}"
+      data-primary-url="${escapeHtml(item.publicLink)}"
       data-private-links="${escapeHtml(JSON.stringify(item.privateLinks || []))}"
       data-contact="${escapeHtml(item.contact)}"
       data-rates="${escapeHtml(item.rates)}"
@@ -1099,6 +1114,8 @@ function privateCardMarkup(item) {
     `;
     var cardDataAttrs = `data-promo-url="${escapeHtml(item.promoUrl)}"
       data-promo-code="${escapeHtml(item.promoCode)}"
+      data-primary-url="${escapeHtml(item.promoUrl)}"
+      data-fallback-url="${escapeHtml(item.socialUrl)}"
       data-mentions="${escapeHtml(item.mentions)}"
       data-post-requirements="${escapeHtml(item.postRequirements)}"
       data-specificities="${escapeHtml(item.specificities)}"
@@ -1218,12 +1235,6 @@ function socialAvatarUrl(profileUrl) {
     if (hostname === "x.com" || hostname === "twitter.com") {
       return `https://unavatar.io/x/${encodeURIComponent(username)}`;
     }
-    if (hostname === "instagram.com") {
-      return `https://unavatar.io/instagram/${encodeURIComponent(username)}`;
-    }
-    if (hostname === "tiktok.com") {
-      return `https://unavatar.io/tiktok/${encodeURIComponent(username)}`;
-    }
   } catch (error) {
     // ignore
   }
@@ -1238,13 +1249,23 @@ async function hydrateCardPreviews(cards, urlField, fallbackUrlField = null) {
       if (!id || !url) return;
 
       const meta = await fetchLinkMeta(url);
-      let imageUrl = meta.image;
-      if (!imageUrl) imageUrl = socialAvatarUrl(url);
-      // Fallback: try the social URL (e.g. Instagram page for an affiliate)
+      let imageUrl = meta.image || socialAvatarUrl(url);
+
       if (!imageUrl && fallbackUrlField) {
         const fallbackUrl = card.dataset[fallbackUrlField] || "";
-        if (fallbackUrl) imageUrl = socialAvatarUrl(fallbackUrl);
+        if (fallbackUrl) {
+          const fallbackMeta = await fetchLinkMeta(fallbackUrl);
+          imageUrl = fallbackMeta.image || socialAvatarUrl(fallbackUrl);
+        }
       }
+
+      if (!imageUrl) {
+        try {
+          const logos = JSON.parse(card.dataset.logos || "[]");
+          imageUrl = logos.find((l) => l) || "";
+        } catch (_) {}
+      }
+
       if (!imageUrl) return;
 
       const img = refs.cardsGrid.querySelector(`[data-preview-image="${CSS.escape(id)}"]`);
@@ -1257,24 +1278,9 @@ async function hydrateCardPreviews(cards, urlField, fallbackUrlField = null) {
   );
 }
 
-async function hydratePublicPreviews() {
-  if (state.isUnlocked) return;
-  const cards = Array.from(refs.cardsGrid.querySelectorAll(".public-card:not(.collaborator-card)"));
-  await hydrateCardPreviews(cards, "promoUrl", "socialUrl");
-  const collabCards = Array.from(refs.cardsGrid.querySelectorAll(".collaborator-card.public-card"));
-  await hydrateCardPreviews(collabCards, "publicLink");
-}
-
-async function hydratePrivateAffiliatePreviews() {
-  if (!state.isUnlocked) return;
-  const cards = Array.from(refs.cardsGrid.querySelectorAll('[data-category="affiliate"]:not(.public-card)'));
-  await hydrateCardPreviews(cards, "promoUrl");
-}
-
-async function hydratePrivateCollaboratorPreviews() {
-  if (!state.isUnlocked) return;
-  const cards = Array.from(refs.cardsGrid.querySelectorAll('.collaborator-card:not(.public-card)'));
-  await hydrateCardPreviews(cards, "publicLink");
+async function hydrateAllPreviews() {
+  const cards = Array.from(refs.cardsGrid.querySelectorAll(".affiliate-card"));
+  await hydrateCardPreviews(cards, "primaryUrl", "fallbackUrl");
 }
 
 function renderCards() {
@@ -1296,9 +1302,7 @@ function renderCards() {
   }
 
   refs.cardsGrid.innerHTML = activeItems.map((item) => cardMarkup(item, archetypeMap)).join("");
-  hydratePublicPreviews();
-  hydratePrivateCollaboratorPreviews();
-  hydratePrivateAffiliatePreviews();
+  hydrateAllPreviews();
   updateDebugInfo();
 }
 
@@ -1442,8 +1446,8 @@ function populateFormFromAffiliate(affiliate) {
   form.elements.logo2.value = affiliate.logos?.[1] || "";
   form.elements.logo3.value = affiliate.logos?.[2] || "";
   form.elements.mentions.value = affiliate.mentions || "";
-  form.elements.platform.value = affiliate.platform || "instagram";
-  form.elements.niche.value = affiliate.niche || "business";
+  form.elements.platform.value = affiliate.platform || "x";
+  form.elements.niche.value = affiliate.niche || "lifestyle";
   form.elements.format.value = affiliate.format || "short-video";
   form.elements.tone.value = affiliate.tone || "authority";
   form.elements.frTags.value = affiliate.fr?.tags || "";
@@ -1474,8 +1478,8 @@ function populateFormFromCollaborator(collaborator) {
   form.elements.logo1.value = collaborator.logos?.[0] || "";
   form.elements.logo2.value = collaborator.logos?.[1] || "";
   form.elements.logo3.value = collaborator.logos?.[2] || "";
-  form.elements.platform.value = collaborator.platform || "instagram";
-  form.elements.niche.value = collaborator.niche || "business";
+  form.elements.platform.value = collaborator.platform || "x";
+  form.elements.niche.value = collaborator.niche || "lifestyle";
   form.elements.format.value = collaborator.format || "short-video";
   form.elements.tone.value = collaborator.tone || "authority";
   form.elements.frTags.value = collaborator.fr?.tags || "";
@@ -1626,7 +1630,7 @@ function loadViewMode() {
 
 async function fetchSession() {
   try {
-    const response = await fetch("/api/session", { credentials: "include" });
+    const response = await fetchWithTimeout("/api/session", { credentials: "include" }, 8000);
     if (!response.ok) {
       throw new Error("Session API unavailable");
     }
@@ -1641,7 +1645,7 @@ async function fetchSession() {
 
 async function loadAffiliates() {
   try {
-    const response = await fetch("/api/affiliates", { cache: "no-store", credentials: "include" });
+    const response = await fetchWithTimeout("/api/affiliates", { cache: "no-store", credentials: "include" }, 10000);
     if (!response.ok) {
       throw new Error("Unable to load affiliates data");
     }
@@ -1681,7 +1685,7 @@ async function loadAffiliates() {
 
 async function loadCollaborators() {
   try {
-    const response = await fetch("/api/collaborators", { cache: "no-store", credentials: "include" });
+    const response = await fetchWithTimeout("/api/collaborators", { cache: "no-store", credentials: "include" }, 10000);
     if (!response.ok) {
       throw new Error("Unable to load collaborators data");
     }
@@ -1769,8 +1773,6 @@ function detectPlatformFromUrl(url) {
   try {
     const hostname = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
     if (["x.com", "twitter.com"].includes(hostname)) return "x";
-    if (hostname === "instagram.com") return "instagram";
-    if (hostname === "tiktok.com") return "tiktok";
   } catch (e) {}
   return null;
 }
@@ -1857,6 +1859,11 @@ function isRemotePersistenceEnabled() {
   return persistence.mode === "remote" && persistence.writable;
 }
 
+function isRemotePersistenceEnabledFor(entity) {
+  const persistence = state.persistenceByEntity[entity] || { mode: "local", writable: false };
+  return persistence.mode === "remote" && persistence.writable;
+}
+
 async function postJson(url, body) {
   const response = await fetch(url, {
     method: "POST",
@@ -1909,6 +1916,51 @@ async function remoteClearAll() {
 
 async function remoteClearAllCollaborators() {
   await postJson("/api/collaborators-clear", {});
+}
+
+async function syncPendingLocalData() {
+  if (!state.isUnlocked) return;
+  let syncedCount = 0;
+
+  if (state.persistenceByEntity.affiliates.mode === "remote") {
+    try {
+      const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (raw) {
+        const pending = JSON.parse(raw);
+        if (Array.isArray(pending) && pending.length > 0) {
+          await remoteBulkUpsert(pending);
+          localStorage.removeItem(LOCAL_STORAGE_KEY);
+          await loadAffiliates();
+          mergeAffiliates();
+          syncedCount += pending.length;
+        }
+      }
+    } catch (e) {
+      // Non-blocking — local data stays intact on failure
+    }
+  }
+
+  if (state.persistenceByEntity.collaborators.mode === "remote") {
+    try {
+      const raw = localStorage.getItem(COLLABORATOR_LOCAL_STORAGE_KEY);
+      if (raw) {
+        const pending = JSON.parse(raw);
+        if (Array.isArray(pending) && pending.length > 0) {
+          await remoteBulkUpsertCollaborators(pending);
+          localStorage.removeItem(COLLABORATOR_LOCAL_STORAGE_KEY);
+          await loadCollaborators();
+          mergeCollaborators();
+          syncedCount += pending.length;
+        }
+      }
+    } catch (e) {
+      // Non-blocking — local data stays intact on failure
+    }
+  }
+
+  if (syncedCount > 0) {
+    setFormFeedback(`${syncedCount} élément(s) locaux synchronisés avec la base.`);
+  }
 }
 
 function rerenderAll() {
@@ -2006,79 +2058,6 @@ function getCardMeta(card) {
   }
 
   return { name, platform, niche, promoUrl, promoCode, mentions, postRequirements, specificities, socialUrl, logos };
-}
-
-function getAffiliationKitText(card) {
-  const isCollab = card.dataset.category !== "affiliate" && Boolean(card.dataset.publicLink);
-  if (isCollab) {
-    const meta = getCardMeta(card);
-    return [
-      `Lien principal: ${meta.publicLink}`,
-      `Contact: ${meta.contact || "-"}`,
-      `Rates: ${meta.rates || "-"}`,
-      `Booking: ${bookingSummary(meta.booking) || "-"}`,
-      `Liens prives: ${meta.privateLinks?.length ? meta.privateLinks.map((entry) => `${entry.label}: ${entry.url}`).join(" | ") : "-"}`,
-      `Logos: ${meta.logos.length ? meta.logos.join(" | ") : "-"}`
-    ].join("\n");
-  }
-
-  const meta = getCardMeta(card);
-  return [
-    `Promo URL: ${meta.promoUrl}`,
-    `Code fan: ${meta.promoCode}`,
-    `Mentions: ${meta.mentions}`,
-    `Logos: ${meta.logos.length ? meta.logos.join(" | ") : "-"}`,
-    `Demandes post: ${meta.postRequirements}`,
-    `Specificites: ${meta.specificities || "-"}`
-  ].join("\n");
-}
-
-function getCopyAllText(card) {
-  const isCollab = card.dataset.category !== "affiliate" && Boolean(card.dataset.publicLink);
-  if (isCollab) {
-    const { name, platform, niche, publicLink, privateLinks, contact, rates, booking, logos } = getCardMeta(card);
-    const tags = getCopyText(card, "tags");
-    const specs = getCopyText(card, "specs");
-    const caption = getCopyText(card, "caption");
-    const template = refs.copyAllCollaboratorTemplate.textContent;
-
-    return template
-      .replace("{{name}}", name)
-      .replace("{{platform}}", platform)
-      .replace("{{niche}}", niche)
-      .replace("{{publicLink}}", publicLink)
-      .replace("{{privateLinks}}", privateLinks?.length ? privateLinks.map((entry) => `${entry.label}: ${entry.url}`).join(" | ") : "-")
-      .replace("{{contact}}", contact || "-")
-      .replace("{{rates}}", rates || "-")
-      .replace("{{booking}}", bookingSummary(booking) || "-")
-      .replace("{{logos}}", logos.length ? logos.join(" | ") : "-")
-      .replace("{{tags}}", tags)
-      .replace("{{specs}}", specs)
-      .replace("{{caption}}", caption)
-      .trim();
-  }
-
-  const { name, platform, niche, promoUrl, promoCode, mentions, postRequirements, specificities, socialUrl, logos } = getCardMeta(card);
-  const tags = getCopyText(card, "tags");
-  const specs = getCopyText(card, "specs");
-  const caption = getCopyText(card, "caption");
-
-  const template = refs.copyAllTemplate.textContent;
-  return template
-    .replace("{{name}}", name)
-    .replace("{{platform}}", platform)
-    .replace("{{niche}}", niche)
-    .replace("{{promoUrl}}", promoUrl)
-    .replace("{{promoCode}}", promoCode)
-    .replace("{{mentions}}", mentions)
-    .replace("{{logos}}", logos.length ? logos.join(" | ") : "-")
-    .replace("{{postRequirements}}", postRequirements)
-    .replace("{{specificities}}", specificities || "-")
-    .replace("{{socialUrl}}", socialUrl || "-")
-    .replace("{{tags}}", tags)
-    .replace("{{specs}}", specs)
-    .replace("{{caption}}", caption)
-    .trim();
 }
 
 function getAffiliationKitText(card) {
@@ -2933,10 +2912,11 @@ function bindComposerActions() {
 
       if (savingAsCollab) {
         const collaborator = buildCollaboratorFromForm(formData);
+        const remoteCollab = isRemotePersistenceEnabledFor("collaborators");
 
         if (state.editingCollaboratorId) {
           collaborator.id = state.editingCollaboratorId;
-          if (isRemotePersistenceEnabled()) {
+          if (remoteCollab) {
             await remoteUpsertCollaborator(collaborator);
             await loadCollaborators();
           } else {
@@ -2946,7 +2926,7 @@ function bindComposerActions() {
           rerenderAll();
           refs.affiliateForm.reset();
           setComposerEditMode(null);
-          setFormFeedback(isRemotePersistenceEnabled() ? "Collaborator modifie. Sauve en base." : "Collaborator modifie. Sauve localement.");
+          setFormFeedback(remoteCollab ? "Collaborateur modifie. Sauve en base." : "Collaborateur modifie. Sauve localement.");
           refs.cardsGrid.scrollIntoView({ behavior: "smooth", block: "start" });
           return;
         }
@@ -2957,7 +2937,7 @@ function bindComposerActions() {
           return;
         }
 
-        if (isRemotePersistenceEnabled()) {
+        if (remoteCollab) {
           // Strip id so the server deduplicates by publicLink (avoids duplicates on multi-submit)
           await remoteUpsertCollaborator({ ...collaborator, id: "" });
           await loadCollaborators();
@@ -2967,16 +2947,17 @@ function bindComposerActions() {
         }
         rerenderAll();
         refs.affiliateForm.reset();
-        setFormFeedback(isRemotePersistenceEnabled() ? "Collaborator ajoute. Sauve en base." : "Collaborator ajoute. Sauve localement.");
+        setFormFeedback(remoteCollab ? "Collaborateur ajoute. Sauve en base." : "Collaborateur ajoute. Sauve localement.");
         refs.cardsGrid.scrollIntoView({ behavior: "smooth", block: "start" });
         return;
       }
 
       const affiliate = buildAffiliateFromForm(formData);
+      const remoteAffiliate = isRemotePersistenceEnabledFor("affiliates");
 
       if (state.editingAffiliateId) {
         affiliate.id = state.editingAffiliateId;
-        if (isRemotePersistenceEnabled()) {
+        if (remoteAffiliate) {
           await remoteUpsertAffiliate(affiliate);
           await loadAffiliates();
         } else {
@@ -2986,7 +2967,7 @@ function bindComposerActions() {
         rerenderAll();
         refs.affiliateForm.reset();
         setComposerEditMode(null);
-        setFormFeedback(isRemotePersistenceEnabled() ? "Affiliation modifiee. Sauvee en base." : "Affiliation modifiee. Sauvee localement.");
+        setFormFeedback(remoteAffiliate ? "Affiliation modifiee. Sauvee en base." : "Affiliation modifiee. Sauvee localement.");
         refs.cardsGrid.scrollIntoView({ behavior: "smooth", block: "start" });
         return;
       }
@@ -2997,7 +2978,7 @@ function bindComposerActions() {
         return;
       }
 
-      if (isRemotePersistenceEnabled()) {
+      if (remoteAffiliate) {
         await remoteUpsertAffiliate(affiliate);
         await loadAffiliates();
       } else {
@@ -3006,7 +2987,7 @@ function bindComposerActions() {
       }
       rerenderAll();
       refs.affiliateForm.reset();
-      setFormFeedback(isRemotePersistenceEnabled() ? "Affiliation ajoutee. Sauvee en base." : "Affiliation ajoutee. Sauvee localement.");
+      setFormFeedback(remoteAffiliate ? "Affiliation ajoutee. Sauvee en base." : "Affiliation ajoutee. Sauvee localement.");
       refs.cardsGrid.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (error) {
       setFormFeedback(error.message || "Impossible d'ajouter cette affiliation.", true);
@@ -3034,6 +3015,7 @@ async function init() {
     }
     loadViewMode();
     await fetchSession();
+    await syncPendingLocalData();
     applyAccessMode();
     applyEntityMode();
     mergeAffiliates();

@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { getAppBaseUrl } = require("../../../lib/app-url");
 
 function base64url(buf) {
   return buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
@@ -24,7 +25,8 @@ module.exports = async function handler(req, res) {
   const codeChallenge = base64url(crypto.createHash("sha256").update(codeVerifier).digest());
   const stateToken = base64url(crypto.randomBytes(24));
 
-  const callbackUrl = "https://affiliates.onlymatt.ca/api/auth/twitter/callback";
+  const appBase = getAppBaseUrl(req);
+  const callbackUrl = appBase + "/api/auth/twitter/callback";
   const scope = "users.read tweet.read";
 
   const params = new URLSearchParams({

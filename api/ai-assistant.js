@@ -1,4 +1,5 @@
 const { isAuthenticated } = require("../lib/auth");
+const { enforceRateLimit, enforcePayloadLimit } = require("../lib/request-guards");
 
 // Affiliate fields reference for the intake system prompt
 const AFFILIATE_SCHEMA = `Fiche AFFILIÉ (type: "affiliate"):
@@ -9,10 +10,10 @@ const AFFILIATE_SCHEMA = `Fiche AFFILIÉ (type: "affiliate"):
   mentions      — Handles à mentionner dans les posts (ex: @brand)
   postRequirements — Exigences du post (texte libre)
   specificities — Notes spécifiques (texte libre)
-  platform      — "instagram" | "tiktok" | "x"
-  niche         — "fitness" | "business" | "lifestyle" | "adult-toys"
-  format        — "reel" | "short-video" | "thread" | "post"
-  tone          — "motivation" | "authority" | "story"
+  platform      — "x" | "onlyfans" | "autre"
+  niche         — "lifestyle" | "adult-toys" | "business" | "autre"
+  format        — "post" | "short-video" | "thread" | "reel"
+  tone          — "authority" | "story" | "motivation"
   logos         — URLs de logos (jusqu'à 3, séparés par des virgules ou nouvelles lignes)`;
 
 const COLLABORATOR_SCHEMA = `Fiche COLLABORATEUR (type: "collaborator"):
@@ -26,10 +27,10 @@ const COLLABORATOR_SCHEMA = `Fiche COLLABORATEUR (type: "collaborator"):
   bookingDate   — Date du booking (ex: "25 avril", "April 25")
   bookingTime   — Heure (ex: "14h00", "2pm")
   bookingLocation — Lieu (ex: "Montréal", "DM pour adresse")
-  platform      — "instagram" | "tiktok" | "x"
-  niche         — "fitness" | "business" | "lifestyle"
-  format        — "reel" | "short-video" | "thread"
-  tone          — "motivation" | "authority" | "story"
+  platform      — "x" | "onlyfans" | "autre"
+  niche         — "lifestyle" | "adult-toys" | "business" | "autre"
+  format        — "post" | "short-video" | "thread" | "reel"
+  tone          — "authority" | "story" | "motivation"
   logos         — URLs de logos (jusqu'à 3)`;
 
 const VOICE_GUIDE = `Ton de voix pour les posts (IMPORTANT — respecte ça en tout temps):
@@ -117,6 +118,9 @@ module.exports = async function handler(req, res) {
     res.status(405).json({ ok: false, error: "Method not allowed" });
     return;
   }
+
+  if (await enforceRateLimit(req, res, { name: "ai-assistant", limit: 60, windowMs: 5 * 60 * 1000 })) return;
+  if (enforcePayloadLimit(req, res, 384 * 1024)) return;
 
   if (!isAuthenticated(req)) {
     res.status(401).json({ ok: false, error: "Unauthorized" });
@@ -218,6 +222,7 @@ module.exports = async function handler(req, res) {
       res.status(200).json({ ok: true, message, extracted });
     }
   } catch (err) {
+    console.error("[ai-assistant] Assistant request failed", { message: String(err?.message || err) });
     res.status(500).json({ ok: false, error: err.message || "Assistant failed" });
   }
 };

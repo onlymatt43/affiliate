@@ -185,6 +185,12 @@ Le nom du fichier est de type: `affiliations-local-autosave-YYYY-MM-DD.json`.
 - Configurer dans Vercel:
 	- `ADMIN_PASSWORD` = ton mot de passe admin
 	- `ADMIN_SESSION_TOKEN` = token long aleatoire
+	- `APP_BASE_URL` = URL publique de l'app (ex: `https://affiliates.onlymatt.ca`)
+
+Important:
+
+- Les secrets admin ne doivent pas avoir de fallback local en production.
+- Si `ADMIN_PASSWORD` ou `ADMIN_SESSION_TOKEN` est absent, `POST /api/login` retourne une erreur serveur explicite.
 
 ## Turso (base de donnees)
 
@@ -204,6 +210,38 @@ Pour collaborators, le meme comportement s'applique avec:
 
 - table `collaborators`
 - fallback `data/collaborators.json`
+
+## Health check production
+
+Endpoint disponible:
+
+- `GET /api/health`
+
+Reponse:
+
+- `200` si application OK (et Turso OK si configure)
+- `503` si Turso est configure mais inaccessible
+
+Payload expose:
+
+- `ok`
+- `ts`
+- `persistence.tursoConfigured`
+- `persistence.tursoHealthy`
+
+## Rate limiting distribue (multi-instance)
+
+Le rate limiter supporte un mode global distribue via Upstash Redis REST.
+
+Variables optionnelles a configurer dans Vercel:
+
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+
+Comportement:
+
+- Si ces variables sont presentes: compteur partage entre instances serverless (limite globale).
+- Si absentes ou indisponibles: fallback automatique sur compteur memoire local (best effort).
 
 ## Vue publique allegee
 

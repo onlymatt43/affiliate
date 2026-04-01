@@ -1,5 +1,6 @@
 const { listCollaborators } = require("../../../lib/collaborators-store");
 const { signToken } = require("../../../lib/collab-token");
+const { getAppBaseUrl } = require("../../../lib/app-url");
 
 function parseCookies(header) {
   const out = {};
@@ -35,7 +36,7 @@ module.exports = async function handler(req, res) {
   const savedState = cookies.tw_state;
   const collabId = cookies.tw_collab;
 
-  const appBase = "https://affiliates.onlymatt.ca";
+  const appBase = getAppBaseUrl(req);
 
   // Validate state to prevent CSRF
   const { code, state } = req.query;
@@ -90,6 +91,10 @@ module.exports = async function handler(req, res) {
     const meData = await meRes.json();
     twitterUsername = (meData.data?.username || "").toLowerCase();
   } catch (err) {
+    console.error("[twitter-callback] OAuth exchange failed", {
+      collabId,
+      message: String(err?.message || err)
+    });
     res.setHeader("Set-Cookie", clearCookies());
     res.redirect(302, appBase + "/?auth_error=1&id=" + encodeURIComponent(collabId));
     return;
