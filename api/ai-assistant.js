@@ -46,28 +46,54 @@ function buildPostSystemPrompt(item, lang) {
   const isAffiliate = !item.publicLink && item.promoUrl;
   const specs = lang === "fr" ? (item.fr?.specs || "") : (item.en?.specs || "");
   const tags = lang === "fr" ? (item.fr?.tags || "") : (item.en?.tags || "");
+  const caption = lang === "fr" ? (item.fr?.caption || "") : (item.en?.caption || "");
+
+  // Build a complete context block from all available fields
+  const lines = [];
+  if (item.name) lines.push(`Nom: ${item.name}`);
+  if (item.category) lines.push(`Catégorie: ${item.category}`);
+  if (item.platform) lines.push(`Plateforme: ${item.platform}`);
+  if (item.niche) lines.push(`Niche: ${item.niche}`);
+  if (item.format) lines.push(`Format: ${item.format}`);
+  if (item.tone) lines.push(`Ton: ${item.tone}`);
 
   if (isAffiliate) {
-    return `${VOICE_GUIDE}
-
-Tu es un créateur de contenu OnlyFans. Écris un post promotionnel en ${langLabel}.
-
-Marque: ${item.name}
-Plateforme: ${item.platform}
-URL promo: ${item.promoUrl}${item.promoCode ? `\nCode promo: ${item.promoCode}` : ""}${item.mentions ? `\nMentions: ${item.mentions}` : ""}${item.postRequirements ? `\nExigences du post: ${item.postRequirements}` : ""}${item.specificities ? `\nSpécificités: ${item.specificities}` : ""}${specs ? `\nSpecs: ${specs}` : ""}${tags ? `\nHashtags à inclure: ${tags}` : ""}
-
-Format: ${item.format || "post"}. Maximum 300 mots.`;
+    if (item.promoUrl) lines.push(`URL promo: ${item.promoUrl}`);
+    if (item.promoCode) lines.push(`Code promo: ${item.promoCode}`);
+    if (item.socialUrl) lines.push(`Profil social: ${item.socialUrl}`);
+    if (item.mentions) lines.push(`Mentions: ${item.mentions}`);
+    if (item.postRequirements) lines.push(`Exigences du post: ${item.postRequirements}`);
+    if (item.specificities) lines.push(`Spécificités: ${item.specificities}`);
+  } else {
+    if (item.publicLink) lines.push(`Lien principal: ${item.publicLink}`);
+    if (item.contact) lines.push(`Contact: ${item.contact}`);
+    if (item.email) lines.push(`Email: ${item.email}`);
+    if (item.rates) lines.push(`Tarifs: ${item.rates}`);
+    if (item.sourceNotes) lines.push(`Notes source: ${item.sourceNotes}`);
+    const booking = item.booking || {};
+    const bookingParts = [booking.dateLabel, booking.timeLabel, booking.location].filter(Boolean);
+    if (bookingParts.length) lines.push(`Booking: ${bookingParts.join(" — ")}`);
+    if (booking.note) lines.push(`Note booking: ${booking.note}`);
+    const pubLinks = Array.isArray(item.publicLinks) ? item.publicLinks.map((l) => l.url || l).filter(Boolean) : [];
+    if (pubLinks.length) lines.push(`Liens publics: ${pubLinks.join(", ")}`);
   }
+
+  if (specs) lines.push(`Specs: ${specs}`);
+  if (tags) lines.push(`Hashtags à inclure: ${tags}`);
+  if (caption) lines.push(`Caption existante: ${caption}`);
+
+  const contextBlock = lines.join("\n");
+  const typeLabel = isAffiliate ? "promotionnel" : "de collaboration";
 
   return `${VOICE_GUIDE}
 
-Tu es un créateur de contenu OnlyFans. Écris un post de collaboration en ${langLabel}.
+Tu es un créateur de contenu OnlyFans. Écris un post ${typeLabel} en ${langLabel}.
 
-Collaborateur: ${item.name}
-Plateforme: ${item.platform}
-Lien: ${item.publicLink}${item.contact ? `\nContact: ${item.contact}` : ""}${item.rates ? `\nRates: ${item.rates}` : ""}${specs ? `\nSpecs de collaboration: ${specs}` : ""}${tags ? `\nHashtags à inclure: ${tags}` : ""}
+Analyse bien toutes les infos de la fiche ci-dessous pour comprendre le contexte et utilise-les intelligemment dans le post:
 
-Format: ${item.format || "short-video"}. Maximum 300 mots.`;
+${contextBlock}
+
+Format: ${item.format || "post"}. Maximum 300 mots.`;
 }
 
 function buildIntakeSystemPrompt(entities) {
