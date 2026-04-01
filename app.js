@@ -1,5 +1,6 @@
 const state = {
   activeEntity: "affiliates",
+  activeCategory: "all",
   activeLang: "fr",
   viewMode: "full",
   isUnlocked: false,
@@ -26,6 +27,7 @@ const state = {
   collaborators: [],
   baseCollaborators: [],
   localCollaborators: [],
+  allItems: [],
   quickAddMode: false
 };
 
@@ -34,6 +36,8 @@ const metaCache = new Map();
 const refs = {
   cardsGrid: document.getElementById("cardsGrid"),
   entityButtons: Array.from(document.querySelectorAll(".entity-btn")),
+  categoryAllBtn: document.getElementById("categoryFilter")?.querySelector(".cat-btn--all"),
+  categoryChips: document.getElementById("categoryChips"),
   searchInput: document.getElementById("searchInput"),
   platformFilter: document.getElementById("platformFilter"),
   nicheFilter: document.getElementById("nicheFilter"),
@@ -59,7 +63,8 @@ const refs = {
   unlockBtn: document.getElementById("unlockBtn"),
   lockBtn: document.getElementById("lockBtn"),
   accessStatus: document.getElementById("accessStatus"),
-  quickAddToggle: document.getElementById("quickAddToggle")
+  quickAddToggle: document.getElementById("quickAddToggle"),
+  aiAssistantBtn: document.getElementById("aiAssistantBtn")
 };
 
 const LOCAL_STORAGE_KEY = "affiliateHubLocalAffiliates";
@@ -259,6 +264,7 @@ function normalizeAffiliateShape(raw, index) {
 
   return {
     id: raw.id ? String(raw.id).trim() : `${slugify(name) || "affiliate"}-${Date.now()}-${index}`,
+    category: toText(raw.category) || "affiliate",
     name,
     platform,
     niche,
@@ -519,25 +525,17 @@ function handleUnlockedParam() {
 
   if (unlockedId) {
     addUnlockedId(unlockedId);
-    if (state.activeEntity !== "collaborators") {
-      state.activeEntity = "collaborators";
-      applyEntityMode();
-      mergeCollaborators();
-      renderCards();
-      applyFilters();
-    }
+    mergeAllItems();
+    renderCards();
+    applyFilters();
     setTimeout(() => swapCardToPrivate(unlockedId), 400);
     return;
   }
 
   if (authError && errorId) {
-    if (state.activeEntity !== "collaborators") {
-      state.activeEntity = "collaborators";
-      applyEntityMode();
-      mergeCollaborators();
-      renderCards();
-      applyFilters();
-    }
+    mergeAllItems();
+    renderCards();
+    applyFilters();
     setTimeout(() => {
       const card = document.querySelector(`[data-collab-id="${CSS.escape(errorId)}"]`);
       if (!card) return;
@@ -558,13 +556,9 @@ function handleShareParam() {
 
   history.replaceState(null, "", location.pathname);
 
-  if (state.activeEntity !== "collaborators") {
-    state.activeEntity = "collaborators";
-    applyEntityMode();
-    mergeCollaborators();
-    renderCards();
-    applyFilters();
-  }
+  mergeAllItems();
+  renderCards();
+  applyFilters();
 
   setTimeout(() => {
     const card = document.querySelector(`[data-collab-id="${CSS.escape(shareId)}"]`);
@@ -861,6 +855,7 @@ function normalizeCollaboratorShape(raw, index) {
 
   return {
     id: raw.id ? String(raw.id).trim() : `${slugify(name) || "collaborator"}-${Date.now()}-${index}`,
+    category: toText(raw.category) || "collaborator",
     name,
     platform,
     niche,
@@ -897,25 +892,43 @@ function isCollaboratorMode() {
 }
 
 function getActiveItems() {
-  return isCollaboratorMode() ? state.collaborators : state.affiliates;
+  return state.allItems;
 }
 
-function publicCardMarkup(item, platformLabel, nicheLabel, archetype = "default") {
-  const nameSizeBase = { default: 1.24, featured: 1.75, small: 1.0, editorial: 1.5 }[archetype] || 1.24;
-  const nameSize = (nameSizeBase + randomBetween(-0.1, 0.1)).toFixed(2);
-  const fontWeight = randomPick([400, 600, 800]);
-  const letterSpacing = randomBetween(0, 0.08).toFixed(3);
-  const textTransform = randomPick(["none", "uppercase"]);
-  const nameRotation = archetype === "editorial" ? randomBetween(-6, 6).toFixed(1) : 0;
+function mergeAllItems() {
+  state.allItems = [...state.affiliates, ...state.collaborators];
+}
+
+function publicCardMarkup(item, archetype = "default") {
+  const isCollabType = Boolean(item.publicLink);
+  const platformLabel = PLATFORM_LABELS[item.platform] || item.platform;
   const borderOpacity = randomBetween(0.14, 0.38).toFixed(2);
 
-  // Random card height per archetype (affiliates are flow cards — use min-height + grid-row)
-  const minHeightMap = { default: [200, 280], featured: [320, 420], small: [160, 220], editorial: [250, 340] };
-  const [mhMin, mhMax] = minHeightMap[archetype] || [200, 280];
-  const minHeight = Math.round(randomBetween(mhMin, mhMax));
-  const gridRow = archetype === "featured" ? "span 2" : "span 1";
+  let articleStyle, articleClasses, nameSize;
+  if (isCollabType) {
+    const nameSizeBase = { default: 1.05, featured: 2.1, small: 0.88, editorial: 1.75 }[archetype] || 1.05;
+    nameSize = (nameSizeBase + randomBetween(-0.15, 0.15)).toFixed(2);
+    const aspectRatioMap = { default: [0.88, 1.12], featured: [0.60, 0.82], small: [1.28, 1.68], editorial: [0.72, 0.96] };
+    const [arMin, arMax] = aspectRatioMap[archetype] || [0.88, 1.12];
+    const aspectRatio = randomBetween(arMin, arMax).toFixed(3);
+    articleStyle = `border: 1px solid rgba(200, 145, 26, ${borderOpacity}); aspect-ratio: ${aspectRatio};`;
+    articleClasses = `affiliate-card collaborator-card public-card card--${archetype}`;
+  } else {
+    const nameSizeBase = { default: 1.24, featured: 1.75, small: 1.0, editorial: 1.5 }[archetype] || 1.24;
+    nameSize = (nameSizeBase + randomBetween(-0.1, 0.1)).toFixed(2);
+    const minHeightMap = { default: [200, 280], featured: [320, 420], small: [160, 220], editorial: [250, 340] };
+    const [mhMin, mhMax] = minHeightMap[archetype] || [200, 280];
+    const minHeight = Math.round(randomBetween(mhMin, mhMax));
+    const gridRow = archetype === "featured" ? "span 2" : "span 1";
+    articleStyle = `border: 1px solid rgba(200, 145, 26, ${borderOpacity}); min-height: ${minHeight}px; grid-row: ${gridRow};`;
+    articleClasses = `affiliate-card public-card card--${archetype}`;
+  }
 
-  const articleStyle = `border: 1px solid rgba(200, 145, 26, ${borderOpacity}); min-height: ${minHeight}px; grid-row: ${gridRow};`;
+  const fontWeight = randomPick([400, 600, 800]);
+  const letterSpacing = randomBetween(0, 0.1).toFixed(3);
+  const textTransform = randomPick(["none", "uppercase"]);
+  const nameRotation = archetype === "editorial" ? randomBetween(-8, 8).toFixed(1) : 0;
+
   const nameStyle = [
     `font-size: ${nameSize}rem`,
     `font-weight: ${fontWeight}`,
@@ -927,67 +940,139 @@ function publicCardMarkup(item, platformLabel, nicheLabel, archetype = "default"
   const editorialAccent = archetype === "editorial"
     ? `<span class="card--editorial__accent" aria-hidden="true"></span>`
     : "";
+  const flippedLabel = archetype === "editorial" && platformLabel
+    ? `<span class="card--editorial__flip-label" aria-hidden="true">${escapeHtml(platformLabel)}</span>`
+    : "";
+
+  const bookingBadgeText = isCollabType ? bookingSummary(item.booking) : "";
+  const bookingBadge = bookingBadgeText ? `<span class="booking-badge">${escapeHtml(bookingBadgeText)}</span>` : "";
+  const bookingTs = isCollabType ? getBookingTimestamp(item) : "";
+
+  let panelContent;
+  if (isCollabType) {
+    const allLinks = [];
+    if (item.publicLink) {
+      let display = item.publicLink;
+      try {
+        const u = new URL(item.publicLink);
+        display = u.hostname.replace(/^www\./, "") + u.pathname.replace(/\/$/, "");
+      } catch (_) {}
+      allLinks.push({ label: display, url: item.publicLink });
+    }
+    (item.publicLinks || []).forEach((pl) => allLinks.push(pl));
+    const linksMarkup = allLinks
+      .map((l) => `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener noreferrer" class="collab-panel__link">${escapeHtml(l.label || l.url)}</a>`)
+      .join("");
+    const contactMarkup = item.contact
+      ? `<div class="collab-panel__copy-row" data-action="copy-contact-inline" data-copy-value="${escapeHtml(item.contact)}" title="Cliquer pour copier">${escapeHtml(item.contact)}</div>`
+      : "";
+    const shareBtn = bookingBadgeText
+      ? `<button type="button" class="collab-panel__share-btn" data-action="share-collab" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}">Partager RV</button>`
+      : "";
+    panelContent = `
+      <div class="collab-panel__name">${escapeHtml(item.name)}</div>
+      <div class="collab-panel__links">${linksMarkup}</div>
+      ${contactMarkup}
+      ${shareBtn}
+    `;
+  } else {
+    const promoCodeMarkup = item.promoCode
+      ? `<div class="collab-panel__copy-row" data-action="copy-promo-code-inline" data-copy-value="${escapeHtml(item.promoCode)}" title="Cliquer pour copier le code">Code : ${escapeHtml(item.promoCode)}</div>`
+      : "";
+    panelContent = `
+      <div class="collab-panel__name">${escapeHtml(item.name)}</div>
+      <div class="collab-panel__links">
+        ${item.promoUrl ? `<a href="${escapeHtml(item.promoUrl)}" target="_blank" rel="noopener noreferrer" class="collab-panel__link">${escapeHtml(item.promoUrl)}</a>` : ""}
+      </div>
+      ${promoCodeMarkup}
+    `;
+  }
 
   return `
-    <article class="affiliate-card public-card card--${archetype}" style="${articleStyle}" data-id="${escapeHtml(item.id)}" data-promo-url="${escapeHtml(item.promoUrl)}" data-promo-code="${escapeHtml(item.promoCode)}" data-social-url="${escapeHtml(item.socialUrl || "")}">
-      <div class="preview-shell" data-preview-shell="${escapeHtml(item.id)}">
-        <img class="preview-image is-hidden" data-preview-image="${escapeHtml(item.id)}" alt="Apercu du lien promo" loading="lazy" />
-        <div class="preview-fallback" data-preview-fallback="${escapeHtml(item.id)}">Apercu lien</div>
-      </div>
-
-      ${logoStripMarkup(item.logos, item.name)}
-
+    <article
+      class="${articleClasses}"
+      style="${articleStyle}"
+      data-id="${escapeHtml(item.id)}"
+      data-category="${escapeHtml(item.category || (isCollabType ? "collaborator" : "affiliate"))}"
+      ${isCollabType ? `data-collab-id="${escapeHtml(item.id)}" data-public-link="${escapeHtml(item.publicLink)}"` : `data-promo-url="${escapeHtml(item.promoUrl)}" data-promo-code="${escapeHtml(item.promoCode)}" data-social-url="${escapeHtml(item.socialUrl || "")}"`}
+      data-booking-ts="${bookingTs || ""}"
+      tabindex="0">
+      ${bookingBadge}
       ${editorialAccent}
-      <div class="card-head">
-        <div>
+      ${flippedLabel}
+      <div class="collab-bg">
+        <div class="collab-bg__fallback" data-preview-fallback="${escapeHtml(item.id)}"></div>
+        <img class="collab-bg__img is-hidden" data-preview-image="${escapeHtml(item.id)}" alt="" loading="lazy" onerror="this.classList.add('is-hidden')" />
+      </div>
+      <div class="collab-overlay">
+        ${logoStripMarkup(item.logos, item.name)}
+        <div class="collab-info">
           <h2 style="${nameStyle}">${escapeHtml(item.name)}</h2>
         </div>
       </div>
-
-      <section class="content-block affiliation-kit">
-        <div class="kit-row">
-          <span class="kit-label">Promo URL</span>
-          ${item.promoUrl ? `<a href="${escapeHtml(item.promoUrl)}" target="_blank" rel="noopener noreferrer" class="kit-link">${escapeHtml(item.promoUrl)}</a>` : `<span class="kit-value">-</span>`}
-        </div>
-        <div class="kit-row">
-          <span class="kit-label">Code fan</span>
-          <span class="kit-value">${escapeHtml(item.promoCode || "-")}</span>
-        </div>
-      </section>
+      <div class="collab-panel">
+        ${panelContent}
+      </div>
     </article>
   `;
 }
 
-function privateCardMarkup(item, platformLabel, nicheLabel) {
-  const socialLink = item.socialUrl
+function privateCardMarkup(item) {
+  const isCollabType = Boolean(item.publicLink);
+  const platformLabel = PLATFORM_LABELS[item.platform] || item.platform;
+  const nicheLabel = NICHE_LABELS[item.niche] || item.niche;
+
+  const socialLink = !isCollabType && item.socialUrl
     ? `<a href="${escapeHtml(item.socialUrl)}" target="_blank" rel="noopener noreferrer" class="contact-link">Profil social</a>`
     : "";
 
-  return `
-    <article
-      class="affiliate-card"
-      data-id="${escapeHtml(item.id)}"
-      data-platform="${escapeHtml(item.platform)}"
-      data-niche="${escapeHtml(item.niche)}"
-      data-format="${escapeHtml(item.format)}"
-      data-tone="${escapeHtml(item.tone)}"
-      data-promo-url="${escapeHtml(item.promoUrl)}"
-      data-promo-code="${escapeHtml(item.promoCode)}"
-      data-mentions="${escapeHtml(item.mentions)}"
-      data-post-requirements="${escapeHtml(item.postRequirements)}"
-      data-specificities="${escapeHtml(item.specificities)}"
-      data-logos="${escapeHtml(JSON.stringify(item.logos || []))}"
-      data-social-url="${escapeHtml(item.socialUrl)}">
-      ${logoStripMarkup(item.logos, item.name)}
-
-      <div class="card-head">
-        <div>
-          <h2>${escapeHtml(item.name)}</h2>
-          <p class="meta">${escapeHtml(platformLabel)} · ${escapeHtml(nicheLabel)}</p>
+  let kitSection;
+  if (isCollabType) {
+    const privateLinksText = item.privateLinks?.length
+      ? item.privateLinks.map((entry) => `${entry.label}: ${entry.url}`).join("\n")
+      : "-";
+    const bookingText = bookingSummary(item.booking) || "-";
+    const bookingTs = getBookingTimestamp(item);
+    kitSection = `
+      <section class="content-block affiliation-kit">
+        <h3>Kit collaboration</h3>
+        <div class="kit-row">
+          <span class="kit-label">Lien principal</span>
+          <a href="${escapeHtml(item.publicLink)}" target="_blank" rel="noopener noreferrer" class="kit-link">Ouvrir</a>
         </div>
-        <div class="card-head__actions">${socialLink}</div>
-      </div>
-
+        <div class="kit-row">
+          <span class="kit-label">Contact</span>
+          <span class="kit-value">${escapeHtml(item.contact || "-")}</span>
+        </div>
+        ${item.email ? `<div class="kit-row"><span class="kit-label">Email</span><span class="kit-value">${escapeHtml(item.email)}</span></div>` : ""}
+        <div class="kit-row">
+          <span class="kit-label">Rates</span>
+          <span class="kit-value">${escapeHtml(item.rates || "-")}</span>
+        </div>
+        <div class="kit-row">
+          <span class="kit-label">Booking</span>
+          <span class="kit-value">${escapeHtml(bookingText)}</span>
+        </div>
+        <div class="kit-row">
+          <span class="kit-label">Liens prives</span>
+          <span class="kit-value">${escapeHtml(privateLinksText)}</span>
+        </div>
+      </section>
+    `;
+    var cardDataAttrs = `data-collab-id="${escapeHtml(item.id)}"
+      data-public-link="${escapeHtml(item.publicLink)}"
+      data-private-links="${escapeHtml(JSON.stringify(item.privateLinks || []))}"
+      data-contact="${escapeHtml(item.contact)}"
+      data-rates="${escapeHtml(item.rates)}"
+      data-booking="${escapeHtml(JSON.stringify(item.booking || {}))}"
+      data-booking-ts="${bookingTs || ""}"`;
+    var cardActions = `
+      <button type="button" data-action="copy-public-link">Copier lien principal</button>
+      <button type="button" data-action="copy-contact">Copier contact</button>
+      <button type="button" data-action="copy-collaboration-kit">Copier kit collaboration</button>
+    `;
+  } else {
+    kitSection = `
       <section class="content-block affiliation-kit">
         <h3>Kit affiliation</h3>
         <div class="kit-row">
@@ -1011,171 +1096,35 @@ function privateCardMarkup(item, platformLabel, nicheLabel) {
           <span class="kit-value">${escapeHtml(item.specificities || "-")}</span>
         </div>
       </section>
-
-      <div class="lang-panel" data-lang="fr">
-        <section class="content-block">
-          <h3>Tags (FR)</h3>
-          <pre class="copy-source" data-copy="tags">${escapeHtml(item.fr.tags)}</pre>
-        </section>
-        <section class="content-block">
-          <h3>Specifications post (FR)</h3>
-          <pre class="copy-source" data-copy="specs">${escapeHtml(item.fr.specs)}</pre>
-        </section>
-        <section class="content-block">
-          <h3>Caption exemple (FR)</h3>
-          <pre class="copy-source" data-copy="caption">${escapeHtml(item.fr.caption)}</pre>
-        </section>
-      </div>
-
-      <div class="lang-panel is-hidden" data-lang="en">
-        <section class="content-block">
-          <h3>Tags (EN)</h3>
-          <pre class="copy-source" data-copy="tags">${escapeHtml(item.en.tags)}</pre>
-        </section>
-        <section class="content-block">
-          <h3>Post specs (EN)</h3>
-          <pre class="copy-source" data-copy="specs">${escapeHtml(item.en.specs)}</pre>
-        </section>
-        <section class="content-block">
-          <h3>Caption sample (EN)</h3>
-          <pre class="copy-source" data-copy="caption">${escapeHtml(item.en.caption)}</pre>
-        </section>
-      </div>
-
-      <div class="card-actions">
-        <button type="button" data-action="copy-promo-url">Copier URL promo</button>
-        <button type="button" data-action="copy-promo-code">Copier code</button>
-        <button type="button" data-action="copy-affiliation-kit">Copier kit affiliation</button>
-        <button type="button" data-action="copy-tags">Copier tags</button>
-        <button type="button" data-action="copy-specs">Copier specs</button>
-        <button type="button" data-action="edit">Modifier</button>
-        <button type="button" data-action="duplicate">Dupliquer bloc</button>
-        <button type="button" data-action="generate-post" class="accent-ai">✦ Générer un post</button>
-        <button type="button" data-action="copy-all" class="accent">Copier tout</button>
-        <span class="copy-feedback" aria-live="polite"></span>
-      </div>
-    </article>
-  `;
-}
-
-function collaboratorPublicCardMarkup(item, platformLabel, nicheLabel, archetype = "default") {
-  const allLinks = [];
-  if (item.publicLink) {
-    let display = item.publicLink;
-    try {
-      const u = new URL(item.publicLink);
-      display = u.hostname.replace(/^www\./, "") + u.pathname.replace(/\/$/, "");
-    } catch (_) {}
-    allLinks.push({ label: display, url: item.publicLink });
+    `;
+    var cardDataAttrs = `data-promo-url="${escapeHtml(item.promoUrl)}"
+      data-promo-code="${escapeHtml(item.promoCode)}"
+      data-mentions="${escapeHtml(item.mentions)}"
+      data-post-requirements="${escapeHtml(item.postRequirements)}"
+      data-specificities="${escapeHtml(item.specificities)}"
+      data-social-url="${escapeHtml(item.socialUrl)}"`;
+    var cardActions = `
+      <button type="button" data-action="copy-promo-url">Copier URL promo</button>
+      <button type="button" data-action="copy-promo-code">Copier code</button>
+      <button type="button" data-action="copy-affiliation-kit">Copier kit affiliation</button>
+      <button type="button" data-action="copy-tags">Copier tags</button>
+      <button type="button" data-action="copy-specs">Copier specs</button>
+    `;
   }
-  // publicLinks are visible without auth; privateLinks are not shown here
-  (item.publicLinks || []).forEach((pl) => allLinks.push(pl));
-
-  const linksMarkup = allLinks
-    .map((l) => `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener noreferrer" class="collab-panel__link">${escapeHtml(l.label || l.url)}</a>`)
-    .join("");
-
-  const contactMarkup = item.contact
-    ? `<div class="collab-panel__copy-row" data-action="copy-contact-inline" data-copy-value="${escapeHtml(item.contact)}" title="Cliquer pour copier">${escapeHtml(item.contact)}</div>`
-    : "";
-
-  const bookingBadgeText = bookingSummary(item.booking);
-  const bookingBadge = bookingBadgeText ? `<span class="booking-badge">${escapeHtml(bookingBadgeText)}</span>` : "";
-  const bookingTs = getBookingTimestamp(item);
-
-  // Archetype-specific typography
-  const nameSizeBase = { default: 1.05, featured: 2.1, small: 0.88, editorial: 1.75 }[archetype] || 1.05;
-  const nameSize = (nameSizeBase + randomBetween(-0.15, 0.15)).toFixed(2);
-  const fontWeight = randomPick([400, 600, 800]);
-  const letterSpacing = randomBetween(0, 0.1).toFixed(3);
-  const textTransform = randomPick(["none", "uppercase"]);
-  const nameRotation = archetype === "editorial" ? randomBetween(-8, 8).toFixed(1) : 0;
-  const borderOpacity = randomBetween(0.14, 0.38).toFixed(2);
-
-  // Random card size per archetype range
-  const aspectRatioMap = {
-    default:   [0.88, 1.12],
-    featured:  [0.60, 0.82],  // tall portrait — spans 2 col so big
-    small:     [1.28, 1.68],  // short & squat
-    editorial: [0.72, 0.96]   // portrait-ish, dramatic
-  };
-  const [arMin, arMax] = aspectRatioMap[archetype] || [0.88, 1.12];
-  const aspectRatio = randomBetween(arMin, arMax).toFixed(3);
-
-  const articleStyle = `border: 1px solid rgba(200, 145, 26, ${borderOpacity}); aspect-ratio: ${aspectRatio};`;
-  const nameStyle = [
-    `font-size: ${nameSize}rem`,
-    `font-weight: ${fontWeight}`,
-    `letter-spacing: ${letterSpacing}em`,
-    `text-transform: ${textTransform}`,
-    archetype === "editorial" ? `transform: rotate(${nameRotation}deg); display: inline-block;` : ""
-  ].filter(Boolean).join("; ");
-
-  // Editorial: diagonal accent line + one flipped micro-label
-  const editorialAccent = archetype === "editorial"
-    ? `<span class="card--editorial__accent" aria-hidden="true"></span>`
-    : "";
-  const flippedLabel = archetype === "editorial" && platformLabel
-    ? `<span class="card--editorial__flip-label" aria-hidden="true">${escapeHtml(platformLabel)}</span>`
-    : "";
 
   return `
     <article
-      class="affiliate-card collaborator-card public-card card--${archetype}"
-      style="${articleStyle}"
+      class="affiliate-card${isCollabType ? " collaborator-card" : ""}"
       data-id="${escapeHtml(item.id)}"
-      data-collab-id="${escapeHtml(item.id)}"
-      data-public-link="${escapeHtml(item.publicLink)}"
-      data-booking-ts="${bookingTs || ""}"
-      tabindex="0">
-      ${bookingBadge}
-      ${editorialAccent}
-      ${flippedLabel}
-      <div class="collab-bg">
-        <div class="collab-bg__fallback" data-preview-fallback="${escapeHtml(item.id)}"></div>
-        <img class="collab-bg__img is-hidden" data-preview-image="${escapeHtml(item.id)}" alt="" loading="lazy" />
-      </div>
-      <div class="collab-overlay">
-        ${logoStripMarkup(item.logos, item.name)}
-        <div class="collab-info">
-          <h2 style="${nameStyle}">${escapeHtml(item.name)}</h2>
-        </div>
-      </div>
-      <div class="collab-panel">
-        <div class="collab-panel__name">${escapeHtml(item.name)}</div>
-        <div class="collab-panel__links">${linksMarkup}</div>
-        ${contactMarkup}
-        ${bookingBadgeText ? `<button type="button" class="collab-panel__share-btn" data-action="share-collab" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}">Partager RV</button>` : ""}
-      </div>
-    </article>
-  `;
-}
-
-function collaboratorPrivateCardMarkup(item, platformLabel, nicheLabel) {
-  const privateLinksText = item.privateLinks?.length
-    ? item.privateLinks.map((entry) => `${entry.label}: ${entry.url}`).join("\n")
-    : "-";
-  const bookingText = bookingSummary(item.booking) || "-";
-  const bookingTs = getBookingTimestamp(item);
-
-  return `
-    <article
-      class="affiliate-card collaborator-card"
-      data-id="${escapeHtml(item.id)}"
-      data-collab-id="${escapeHtml(item.id)}"
+      data-category="${escapeHtml(item.category || (isCollabType ? "collaborator" : "affiliate"))}"
       data-platform="${escapeHtml(item.platform)}"
       data-niche="${escapeHtml(item.niche)}"
       data-format="${escapeHtml(item.format)}"
       data-tone="${escapeHtml(item.tone)}"
-      data-public-link="${escapeHtml(item.publicLink)}"
-      data-private-links="${escapeHtml(JSON.stringify(item.privateLinks || []))}"
-      data-contact="${escapeHtml(item.contact)}"
-      data-rates="${escapeHtml(item.rates)}"
-      data-booking="${escapeHtml(JSON.stringify(item.booking || {}))}"
-      data-booking-ts="${bookingTs || ""}"
+      ${cardDataAttrs}
       data-logos="${escapeHtml(JSON.stringify(item.logos || []))}">
       <div class="preview-shell" data-preview-shell="${escapeHtml(item.id)}">
-        <img class="preview-image is-hidden" data-preview-image="${escapeHtml(item.id)}" alt="Apercu du lien principal" loading="lazy" />
+        <img class="preview-image is-hidden" data-preview-image="${escapeHtml(item.id)}" alt="Apercu du lien" loading="lazy" />
         <div class="preview-fallback" data-preview-fallback="${escapeHtml(item.id)}">Apercu lien</div>
       </div>
       ${logoStripMarkup(item.logos, item.name)}
@@ -1185,35 +1134,10 @@ function collaboratorPrivateCardMarkup(item, platformLabel, nicheLabel) {
           <h2>${escapeHtml(item.name)}</h2>
           <p class="meta">${escapeHtml(platformLabel)} · ${escapeHtml(nicheLabel)}</p>
         </div>
+        <div class="card-head__actions">${socialLink}</div>
       </div>
 
-      <section class="content-block affiliation-kit">
-        <h3>Kit collaboration</h3>
-        <div class="kit-row">
-          <span class="kit-label">Lien principal</span>
-          <a href="${escapeHtml(item.publicLink)}" target="_blank" rel="noopener noreferrer" class="kit-link">Ouvrir</a>
-        </div>
-        <div class="kit-row">
-          <span class="kit-label">Contact</span>
-          <span class="kit-value">${escapeHtml(item.contact || "-")}</span>
-        </div>
-        ${item.email ? `<div class="kit-row">
-          <span class="kit-label">Email</span>
-          <span class="kit-value">${escapeHtml(item.email)}</span>
-        </div>` : ""}
-        <div class="kit-row">
-          <span class="kit-label">Rates</span>
-          <span class="kit-value">${escapeHtml(item.rates || "-")}</span>
-        </div>
-        <div class="kit-row">
-          <span class="kit-label">Booking</span>
-          <span class="kit-value">${escapeHtml(bookingText)}</span>
-        </div>
-        <div class="kit-row">
-          <span class="kit-label">Liens prives</span>
-          <span class="kit-value">${escapeHtml(privateLinksText)}</span>
-        </div>
-      </section>
+      ${kitSection}
 
       <div class="lang-panel" data-lang="fr">
         <section class="content-block">
@@ -1246,12 +1170,10 @@ function collaboratorPrivateCardMarkup(item, platformLabel, nicheLabel) {
       </div>
 
       <div class="card-actions">
-        <button type="button" data-action="copy-public-link">Copier lien principal</button>
-        <button type="button" data-action="copy-contact">Copier contact</button>
-        <button type="button" data-action="copy-collaboration-kit">Copier kit collaboration</button>
+        ${cardActions}
         <button type="button" data-action="edit">Modifier</button>
         <button type="button" data-action="duplicate">Dupliquer bloc</button>
-        <button type="button" data-action="generate-post" class="accent-ai">✦ Générer un post</button>
+        <button type="button" data-action="ai-assistant" class="accent-ai">✦ Assistant IA</button>
         <button type="button" data-action="copy-all" class="accent">Copier tout</button>
         <span class="copy-feedback" aria-live="polite"></span>
       </div>
@@ -1260,25 +1182,12 @@ function collaboratorPrivateCardMarkup(item, platformLabel, nicheLabel) {
 }
 
 function cardMarkup(item, archetypeMap = new Map()) {
-  const platformLabel = PLATFORM_LABELS[item.platform] || item.platform;
-  const nicheLabel = NICHE_LABELS[item.niche] || item.niche;
-
-  if (isCollaboratorMode()) {
-    if (!state.isUnlocked) {
-      const archetype = archetypeMap.get(item.id) || "default";
-      return collaboratorPublicCardMarkup(item, platformLabel, nicheLabel, archetype);
-    }
-    return collaboratorPrivateCardMarkup(item, platformLabel, nicheLabel);
-  }
-
   if (!state.isUnlocked) {
     const archetype = archetypeMap.get(item.id) || "default";
-    return publicCardMarkup(item, platformLabel, nicheLabel, archetype);
+    return publicCardMarkup(item, archetype);
   }
-
-  return privateCardMarkup(item, platformLabel, nicheLabel);
+  return privateCardMarkup(item);
 }
-
 async function fetchLinkMeta(url) {
   if (!url) return { image: "", title: "", description: "" };
   if (metaCache.has(url)) return metaCache.get(url);
@@ -1357,14 +1266,14 @@ async function hydratePublicPreviews() {
 }
 
 async function hydratePrivateAffiliatePreviews() {
-  if (!state.isUnlocked || isCollaboratorMode()) return;
-  const cards = Array.from(refs.cardsGrid.querySelectorAll(".affiliate-card:not(.collaborator-card)"));
+  if (!state.isUnlocked) return;
+  const cards = Array.from(refs.cardsGrid.querySelectorAll('[data-category="affiliate"]:not(.public-card)'));
   await hydrateCardPreviews(cards, "promoUrl");
 }
 
 async function hydratePrivateCollaboratorPreviews() {
-  if (!state.isUnlocked || !isCollaboratorMode()) return;
-  const cards = Array.from(refs.cardsGrid.querySelectorAll(".collaborator-card:not(.public-card)"));
+  if (!state.isUnlocked) return;
+  const cards = Array.from(refs.cardsGrid.querySelectorAll('.collaborator-card:not(.public-card)'));
   await hydrateCardPreviews(cards, "publicLink");
 }
 
@@ -1495,25 +1404,21 @@ function findCollaboratorById(id) {
   return state.collaborators.find((item) => item.id === id) || null;
 }
 
-function setComposerEditMode(affiliate) {
-  if (isCollaboratorMode()) {
-    if (affiliate) {
-      state.editingCollaboratorId = affiliate.id;
-      if (refs.composerTitle) refs.composerTitle.textContent = "Modifier un collaborator";
-      if (refs.submitAffiliateBtn) refs.submitAffiliateBtn.textContent = "Enregistrer les modifications";
-      if (refs.cancelEditBtn) refs.cancelEditBtn.classList.remove("is-hidden");
-      return;
-    }
+function setComposerEditMode(item) {
+  const isCollab = Boolean(item?.publicLink);
 
-    state.editingCollaboratorId = null;
-    if (refs.composerTitle) refs.composerTitle.textContent = "Ajouter un collaborator";
-    if (refs.submitAffiliateBtn) refs.submitAffiliateBtn.textContent = "Ajouter et afficher";
-    if (refs.cancelEditBtn) refs.cancelEditBtn.classList.add("is-hidden");
+  if (isCollab) {
+    state.editingCollaboratorId = item.id;
+    state.editingAffiliateId = null;
+    if (refs.composerTitle) refs.composerTitle.textContent = "Modifier un collaborator";
+    if (refs.submitAffiliateBtn) refs.submitAffiliateBtn.textContent = "Enregistrer les modifications";
+    if (refs.cancelEditBtn) refs.cancelEditBtn.classList.remove("is-hidden");
     return;
   }
 
-  if (affiliate) {
-    state.editingAffiliateId = affiliate.id;
+  if (item) {
+    state.editingAffiliateId = item.id;
+    state.editingCollaboratorId = null;
     if (refs.composerTitle) refs.composerTitle.textContent = "Modifier une affiliation";
     if (refs.submitAffiliateBtn) refs.submitAffiliateBtn.textContent = "Enregistrer les modifications";
     if (refs.cancelEditBtn) refs.cancelEditBtn.classList.remove("is-hidden");
@@ -1521,6 +1426,7 @@ function setComposerEditMode(affiliate) {
   }
 
   state.editingAffiliateId = null;
+  state.editingCollaboratorId = null;
   if (refs.composerTitle) refs.composerTitle.textContent = "Ajouter une affiliation (V4)";
   if (refs.submitAffiliateBtn) refs.submitAffiliateBtn.textContent = "Ajouter et afficher";
   if (refs.cancelEditBtn) refs.cancelEditBtn.classList.add("is-hidden");
@@ -1548,6 +1454,8 @@ function populateFormFromAffiliate(affiliate) {
   form.elements.enCaption.value = affiliate.en?.caption || "";
   form.elements.postRequirements.value = affiliate.postRequirements || "";
   form.elements.specificities.value = affiliate.specificities || "";
+  const fCatEl = document.getElementById("fCategory");
+  if (fCatEl) { fCatEl.value = affiliate.category || "affiliate"; applyCategoryToForm(fCatEl.value); }
 }
 
 function populateFormFromCollaborator(collaborator) {
@@ -1583,6 +1491,8 @@ function populateFormFromCollaborator(collaborator) {
   form.elements.mentions.value = "";
   form.elements.postRequirements.value = "";
   form.elements.specificities.value = "";
+  const fCatEl = document.getElementById("fCategory");
+  if (fCatEl) { fCatEl.value = collaborator.category || "collaborator"; applyCategoryToForm(fCatEl.value); }
 }
 
 function upsertLocalAffiliate(item) {
@@ -1642,11 +1552,10 @@ function autoExportLocalIfEnabled(reason) {
 
   try {
     const suffix = isRemotePersistenceEnabled() ? "remote" : "local";
-    const entityPrefix = isCollaboratorMode() ? "collaborators" : "affiliations";
-    const filename = `${entityPrefix}-${suffix}-autosave-${new Date().toISOString().slice(0, 10)}.json`;
+    const filename = `all-${suffix}-autosave-${new Date().toISOString().slice(0, 10)}.json`;
     const payload = isRemotePersistenceEnabled()
       ? getFullDataset()
-      : (isCollaboratorMode() ? state.localCollaborators : state.localAffiliates);
+      : [...state.localAffiliates, ...state.localCollaborators];
     downloadJsonFile(filename, payload);
     setFormFeedback(`Auto-export JSON effectue (${reason}).`);
   } catch (error) {
@@ -2005,10 +1914,12 @@ async function remoteClearAllCollaborators() {
 function rerenderAll() {
   mergeAffiliates();
   mergeCollaborators();
+  mergeAllItems();
   renderCards();
   applyLanguage();
   applyViewMode();
   applyFilters();
+  refreshCategoryChips();
 }
 
 function getAllCards() {
@@ -2043,7 +1954,8 @@ function getCopyText(card, type) {
 }
 
 function getCardMeta(card) {
-  if (isCollaboratorMode()) {
+  const isCollab = card.dataset.category !== "affiliate" && Boolean(card.dataset.publicLink);
+  if (isCollab) {
     const name = card.querySelector("h2")?.textContent.trim() || "Collaborator";
     const meta = card.querySelector(".meta")?.textContent.trim() || "";
     const [platform = "", niche = ""] = meta.split("·").map((value) => value.trim());
@@ -2097,7 +2009,8 @@ function getCardMeta(card) {
 }
 
 function getAffiliationKitText(card) {
-  if (isCollaboratorMode()) {
+  const isCollab = card.dataset.category !== "affiliate" && Boolean(card.dataset.publicLink);
+  if (isCollab) {
     const meta = getCardMeta(card);
     return [
       `Lien principal: ${meta.publicLink}`,
@@ -2121,7 +2034,81 @@ function getAffiliationKitText(card) {
 }
 
 function getCopyAllText(card) {
-  if (isCollaboratorMode()) {
+  const isCollab = card.dataset.category !== "affiliate" && Boolean(card.dataset.publicLink);
+  if (isCollab) {
+    const { name, platform, niche, publicLink, privateLinks, contact, rates, booking, logos } = getCardMeta(card);
+    const tags = getCopyText(card, "tags");
+    const specs = getCopyText(card, "specs");
+    const caption = getCopyText(card, "caption");
+    const template = refs.copyAllCollaboratorTemplate.textContent;
+
+    return template
+      .replace("{{name}}", name)
+      .replace("{{platform}}", platform)
+      .replace("{{niche}}", niche)
+      .replace("{{publicLink}}", publicLink)
+      .replace("{{privateLinks}}", privateLinks?.length ? privateLinks.map((entry) => `${entry.label}: ${entry.url}`).join(" | ") : "-")
+      .replace("{{contact}}", contact || "-")
+      .replace("{{rates}}", rates || "-")
+      .replace("{{booking}}", bookingSummary(booking) || "-")
+      .replace("{{logos}}", logos.length ? logos.join(" | ") : "-")
+      .replace("{{tags}}", tags)
+      .replace("{{specs}}", specs)
+      .replace("{{caption}}", caption)
+      .trim();
+  }
+
+  const { name, platform, niche, promoUrl, promoCode, mentions, postRequirements, specificities, socialUrl, logos } = getCardMeta(card);
+  const tags = getCopyText(card, "tags");
+  const specs = getCopyText(card, "specs");
+  const caption = getCopyText(card, "caption");
+
+  const template = refs.copyAllTemplate.textContent;
+  return template
+    .replace("{{name}}", name)
+    .replace("{{platform}}", platform)
+    .replace("{{niche}}", niche)
+    .replace("{{promoUrl}}", promoUrl)
+    .replace("{{promoCode}}", promoCode)
+    .replace("{{mentions}}", mentions)
+    .replace("{{logos}}", logos.length ? logos.join(" | ") : "-")
+    .replace("{{postRequirements}}", postRequirements)
+    .replace("{{specificities}}", specificities || "-")
+    .replace("{{socialUrl}}", socialUrl || "-")
+    .replace("{{tags}}", tags)
+    .replace("{{specs}}", specs)
+    .replace("{{caption}}", caption)
+    .trim();
+}
+
+function getAffiliationKitText(card) {
+  const isCollab = card.dataset.category !== "affiliate" && Boolean(card.dataset.publicLink);
+  if (isCollab) {
+    const meta = getCardMeta(card);
+    return [
+      `Lien principal: ${meta.publicLink}`,
+      `Contact: ${meta.contact || "-"}`,
+      `Rates: ${meta.rates || "-"}`,
+      `Booking: ${bookingSummary(meta.booking) || "-"}`,
+      `Liens prives: ${meta.privateLinks?.length ? meta.privateLinks.map((entry) => `${entry.label}: ${entry.url}`).join(" | ") : "-"}`,
+      `Logos: ${meta.logos.length ? meta.logos.join(" | ") : "-"}`
+    ].join("\n");
+  }
+
+  const meta = getCardMeta(card);
+  return [
+    `Promo URL: ${meta.promoUrl}`,
+    `Code fan: ${meta.promoCode}`,
+    `Mentions: ${meta.mentions}`,
+    `Logos: ${meta.logos.length ? meta.logos.join(" | ") : "-"}`,
+    `Demandes post: ${meta.postRequirements}`,
+    `Specificites: ${meta.specificities || "-"}`
+  ].join("\n");
+}
+
+function getCopyAllText(card) {
+  const isCollab = card.dataset.category !== "affiliate" && Boolean(card.dataset.publicLink);
+  if (isCollab) {
     const { name, platform, niche, publicLink, privateLinks, contact, rates, booking, logos } = getCardMeta(card);
     const tags = getCopyText(card, "tags");
     const specs = getCopyText(card, "specs");
@@ -2204,26 +2191,61 @@ function applyAccessMode() {
 }
 
 function applyEntityMode() {
+  // Legacy — kept for backward compat; new UI uses applyCategoryFilter
   refs.entityButtons.forEach((btn) => {
     btn.classList.toggle("is-active", btn.dataset.entity === state.activeEntity);
   });
+}
 
-  const isCollaborator = isCollaboratorMode();
-  document.querySelectorAll(".entity-affiliate-only").forEach((el) => {
-    el.classList.toggle("is-hidden", isCollaborator);
+function applyCategoryToForm(categoryValue) {
+  const isCollab = categoryValue !== "affiliate";
+  document.querySelectorAll(".form-affiliate-only").forEach((el) => {
+    el.classList.toggle("is-hidden", isCollab);
   });
-  document.querySelectorAll(".entity-collaborator-only").forEach((el) => {
-    el.classList.toggle("is-hidden", !isCollaborator);
+  document.querySelectorAll(".form-collaborator-only").forEach((el) => {
+    el.classList.toggle("is-hidden", !isCollab);
   });
 
   if (refs.composerTitle) {
-    refs.composerTitle.textContent = isCollaborator ? "Ajouter un collaborator" : "Ajouter une affiliation (V4)";
+    refs.composerTitle.textContent = isCollab ? "Ajouter un collaborator" : "Ajouter une affiliation";
   }
   if (refs.composerSubtitle) {
-    refs.composerSubtitle.textContent = isCollaborator
+    refs.composerSubtitle.textContent = isCollab
       ? "Colle un bloc brut et l'app extrait lien principal, contacts et booking quand possible."
       : "Les ajouts sont sauves localement dans ton navigateur (localStorage).";
   }
+}
+
+function refreshCategoryChips() {
+  if (!refs.categoryChips) return;
+
+  const categories = [...new Set(state.allItems.map((item) => item.category).filter(Boolean))];
+
+  refs.categoryChips.innerHTML = categories
+    .map((cat) => {
+      const isActive = state.activeCategory === cat;
+      return `<button type="button" class="cat-btn${isActive ? " is-active" : ""}" data-category="${escapeHtml(cat)}">${escapeHtml(cat)}</button>`;
+    })
+    .join("");
+
+  refs.categoryChips.querySelectorAll(".cat-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.activeCategory = btn.dataset.category;
+      applyCategoryFilter();
+    });
+  });
+}
+
+function applyCategoryFilter() {
+  if (refs.categoryAllBtn) {
+    refs.categoryAllBtn.classList.toggle("is-active", state.activeCategory === "all");
+  }
+  if (refs.categoryChips) {
+    refs.categoryChips.querySelectorAll(".cat-btn").forEach((btn) => {
+      btn.classList.toggle("is-active", btn.dataset.category === state.activeCategory);
+    });
+  }
+  applyFilters();
 }
 
 function cardMatches(card, searchTerm, platform, niche, format, tone, options = {}) {
@@ -2252,11 +2274,16 @@ function applyFilters() {
   const niche = refs.nicheFilter.value;
   const format = refs.formatFilter.value;
   const tone = refs.toneFilter.value;
-  const upcomingOnly = isCollaboratorMode() && Boolean(refs.upcomingBookingsToggle?.checked);
+  const upcomingOnly = Boolean(refs.upcomingBookingsToggle?.checked);
   const nowTimestamp = Date.now();
   let visibleCount = 0;
 
   getAllCards().forEach((card) => {
+    // Category filter first
+    if (state.activeCategory !== "all" && card.dataset.category !== state.activeCategory) {
+      card.style.display = "none";
+      return;
+    }
     const isVisible = cardMatches(card, searchTerm, platform, niche, format, tone, {
       upcomingOnly,
       nowTimestamp
@@ -2276,30 +2303,33 @@ function applyFilters() {
         return aTs - bTs;
       })
       .forEach((card) => refs.cardsGrid.append(card));
-  } else if (isCollaboratorMode()) {
+  } else {
+    // Sort cards with upcoming bookings to the top
     const now = Date.now();
-    const visibleCards = getAllCards().filter((card) => card.style.display !== "none");
-    visibleCards
-      .sort((cardA, cardB) => {
-        const aTs = Number(cardA.dataset.bookingTs || "");
-        const bTs = Number(cardB.dataset.bookingTs || "");
-        const aFuture = Number.isFinite(aTs) && aTs > now;
-        const bFuture = Number.isFinite(bTs) && bTs > now;
-        if (aFuture && !bFuture) return -1;
-        if (!aFuture && bFuture) return 1;
-        if (aFuture && bFuture) return aTs - bTs;
-        return 0;
-      })
-      .forEach((card) => refs.cardsGrid.append(card));
+    const visibleCards = getAllCards().filter((card) => card.style.display !== "none" && card.dataset.bookingTs);
+    if (visibleCards.some((card) => Number(card.dataset.bookingTs || "") > now)) {
+      visibleCards
+        .sort((cardA, cardB) => {
+          const aTs = Number(cardA.dataset.bookingTs || "");
+          const bTs = Number(cardB.dataset.bookingTs || "");
+          const aFuture = Number.isFinite(aTs) && aTs > now;
+          const bFuture = Number.isFinite(bTs) && bTs > now;
+          if (aFuture && !bFuture) return -1;
+          if (!aFuture && bFuture) return 1;
+          if (aFuture && bFuture) return aTs - bTs;
+          return 0;
+        })
+        .forEach((card) => refs.cardsGrid.append(card));
+    }
   }
 
   refs.emptyState.classList.toggle("is-hidden", visibleCount !== 0);
   state.debug.visibleCount = visibleCount;
-  const noun = isCollaboratorMode() ? "collaborator" : "affiliation";
   const suffix = upcomingOnly ? " (RDV a venir)" : "";
-  refs.resultsInfo.textContent = `${visibleCount} ${noun}${visibleCount > 1 ? "s" : ""} affiche${visibleCount > 1 ? "es" : "e"}${suffix}`;
+  refs.resultsInfo.textContent = `${visibleCount} carte${visibleCount > 1 ? "s" : ""} affich\u00e9e${visibleCount > 1 ? "s" : ""}${suffix}`;
   updateDebugInfo();
 }
+
 
 function duplicateCard(card) {
   const clone = card.cloneNode(true);
@@ -2403,48 +2433,198 @@ function bindAccessControls() {
   });
 }
 
-function bindCardActions() {
-  // --- AI post generation overlay ---
-  function showGeneratePostOverlay(card, item) {
-    document.querySelectorAll(".generate-post-overlay").forEach((el) => el.remove());
+// --- Unified AI Assistant overlay ---
+function showAIAssistantOverlay(item, mode) {
+    document.querySelectorAll(".ai-overlay").forEach((el) => el.remove());
 
     const overlay = document.createElement("div");
-    overlay.className = "generate-post-overlay";
+    overlay.className = "ai-overlay";
     overlay.setAttribute("role", "dialog");
     overlay.setAttribute("aria-modal", "true");
     overlay.innerHTML = `
-      <div class="generate-post-overlay__inner">
-        <button type="button" class="generate-post-overlay__close" aria-label="Fermer">&times;</button>
-        <h3 class="generate-post-overlay__title">✦ Générer un post</h3>
-        <div class="generate-post-overlay__langs">
-          <button type="button" class="generate-post-overlay__lang-btn is-active" data-lang="fr">FR</button>
-          <button type="button" class="generate-post-overlay__lang-btn" data-lang="en">EN</button>
+      <div class="ai-overlay__inner">
+        <div class="ai-overlay__header">
+          <h3 class="ai-overlay__title">✦ Assistant IA</h3>
+          <div class="ai-overlay__header-right">
+            ${mode === "post" ? `
+            <div class="ai-overlay__langs">
+              <button type="button" class="ai-overlay__lang-btn is-active" data-lang="fr">FR</button>
+              <button type="button" class="ai-overlay__lang-btn" data-lang="en">EN</button>
+            </div>` : `<span class="ai-overlay__entity-badge is-hidden"></span>`}
+            <button type="button" class="ai-overlay__close" aria-label="Fermer">&times;</button>
+          </div>
         </div>
-        <div class="generate-post-overlay__loading is-hidden">Génération en cours...</div>
-        <textarea class="generate-post-overlay__result" placeholder="Le post généré apparaîtra ici..." rows="8" readonly></textarea>
-        <div class="generate-post-overlay__actions">
-          <button type="button" class="generate-post-overlay__generate-btn accent-ai">Générer</button>
-          <button type="button" class="generate-post-overlay__copy-btn" disabled>Copier</button>
-        </div>
-        <div class="generate-post-overlay__chat">
-          <input type="text" class="generate-post-overlay__chat-input" placeholder="Ex: rends-le plus court, ajoute des emojis..." />
-          <button type="button" class="generate-post-overlay__chat-send accent-ai" disabled>Envoyer</button>
+        <div class="ai-overlay__thread"></div>
+        <div class="ai-overlay__input-row">
+          <textarea class="ai-overlay__input" rows="2" placeholder="${mode === "post" ? "Ex: rends-le plus court, ajoute une touche d'humour..." : "Colle un DM, un email, ou décris la fiche à créer..."}"></textarea>
+          <button type="button" class="ai-overlay__send accent-ai">Envoyer</button>
         </div>
       </div>
     `;
 
     let activeLang = "fr";
+    let conversationHistory = [];
+    let isBusy = false;
 
-    const closeBtn = overlay.querySelector(".generate-post-overlay__close");
-    const langBtns = overlay.querySelectorAll(".generate-post-overlay__lang-btn");
-    const loadingEl = overlay.querySelector(".generate-post-overlay__loading");
-    const resultEl = overlay.querySelector(".generate-post-overlay__result");
-    const generateBtn = overlay.querySelector(".generate-post-overlay__generate-btn");
-    const copyBtn = overlay.querySelector(".generate-post-overlay__copy-btn");
-    const chatInput = overlay.querySelector(".generate-post-overlay__chat-input");
-    const chatSend = overlay.querySelector(".generate-post-overlay__chat-send");
+    const closeBtn = overlay.querySelector(".ai-overlay__close");
+    const langBtns = overlay.querySelectorAll(".ai-overlay__lang-btn");
+    const thread = overlay.querySelector(".ai-overlay__thread");
+    const input = overlay.querySelector(".ai-overlay__input");
+    const sendBtn = overlay.querySelector(".ai-overlay__send");
+    const entityBadge = overlay.querySelector(".ai-overlay__entity-badge");
 
-    let conversationHistory = []; // [{role, content}]
+    function appendMessage(role, text) {
+      const bubble = document.createElement("div");
+      bubble.className = "ai-overlay__msg";
+      bubble.dataset.role = role;
+      bubble.textContent = text;
+
+      if (role === "assistant" && mode === "post") {
+        const copyBtn = document.createElement("button");
+        copyBtn.type = "button";
+        copyBtn.className = "ai-overlay__copy-bubble";
+        copyBtn.textContent = "Copier";
+        copyBtn.addEventListener("click", () => {
+          copyText(text).then(() => {
+            const orig = copyBtn.textContent;
+            copyBtn.textContent = "Copié !";
+            setTimeout(() => { copyBtn.textContent = orig; }, 1500);
+          });
+        });
+        bubble.appendChild(copyBtn);
+      }
+
+      thread.appendChild(bubble);
+      thread.scrollTop = thread.scrollHeight;
+    }
+
+    function appendExtractedBlock(extracted) {
+      const block = document.createElement("div");
+      block.className = "ai-overlay__extracted";
+
+      const typeLabel = extracted.entityType === "affiliate" ? "Affilié" : "Collaborateur";
+      const editLabel = extracted.editId ? " (modification)" : " (nouveau)";
+      const fieldLines = Object.entries(extracted.fields || {})
+        .filter(([, v]) => v)
+        .map(([k, v]) => `<span class="ai-overlay__extracted-field"><strong>${escapeHtml(k)}</strong>: ${escapeHtml(String(v))}</span>`)
+        .join("");
+
+      block.innerHTML = `
+        <div class="ai-overlay__extracted-header">${escapeHtml(typeLabel + editLabel)}</div>
+        <div class="ai-overlay__extracted-fields">${fieldLines}</div>
+        <button type="button" class="ai-overlay__apply-btn accent-ai">Appliquer au formulaire</button>
+      `;
+
+      if (entityBadge) {
+        entityBadge.textContent = typeLabel;
+        entityBadge.classList.remove("is-hidden");
+      }
+
+      block.querySelector(".ai-overlay__apply-btn").addEventListener("click", () => {
+        overlay.remove();
+
+        // Switch fCategory if needed
+        const fCatEl = document.getElementById("fCategory");
+        if (fCatEl) {
+          fCatEl.value = extracted.entityType === "collaborator" ? "collaborator" : "affiliate";
+          applyCategoryToForm(fCatEl.value);
+        }
+
+        const existingItem = extracted.editId
+          ? (extracted.entityType === "collaborator" ? findCollaboratorById(extracted.editId) : findAffiliateById(extracted.editId))
+          : null;
+
+        setComposerEditMode(existingItem || null);
+
+        // Merge extracted fields with existing item if editing
+        const fields = existingItem ? { ...existingItem, ...extracted.fields } : extracted.fields;
+
+        if (extracted.entityType === "collaborator") {
+          populateFormFromCollaborator(fields);
+        } else {
+          populateFormFromAffiliate(fields);
+        }
+
+        refs.affiliateForm.scrollIntoView({ behavior: "smooth", block: "start" });
+
+        // Show toast
+        if (refs.formFeedback) {
+          refs.formFeedback.textContent = "Données remplies par l'IA — vérifiez avant de sauvegarder";
+          refs.formFeedback.classList.add("is-visible");
+          setTimeout(() => refs.formFeedback.classList.remove("is-visible"), 4000);
+        }
+      });
+
+      thread.appendChild(block);
+      thread.scrollTop = thread.scrollHeight;
+    }
+
+    function setBusy(busy) {
+      isBusy = busy;
+      sendBtn.disabled = busy;
+      input.disabled = busy;
+      if (busy) {
+        const loading = document.createElement("div");
+        loading.className = "ai-overlay__loading";
+        loading.dataset.loading = "1";
+        loading.textContent = "…";
+        thread.appendChild(loading);
+        thread.scrollTop = thread.scrollHeight;
+      } else {
+        thread.querySelectorAll("[data-loading]").forEach((el) => el.remove());
+      }
+    }
+
+    async function sendMessage(userMessage, isAuto = false) {
+      if (isBusy) return;
+      if (!isAuto && !userMessage.trim()) return;
+
+      if (!isAuto) {
+        conversationHistory.push({ role: "user", content: userMessage });
+        appendMessage("user", userMessage);
+      }
+
+      setBusy(true);
+
+      try {
+        const body = mode === "post"
+          ? { mode: "post", lang: activeLang, item, messages: conversationHistory }
+          : {
+              mode: "intake",
+              lang: activeLang,
+              entities: {
+                affiliates: state.affiliates.map((a) => ({ id: a.id, name: a.name })),
+                collaborators: state.collaborators.map((c) => ({ id: c.id, name: c.name }))
+              },
+              messages: conversationHistory
+            };
+
+        const res = await fetch("/api/ai-assistant", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+        setBusy(false);
+
+        if (!data.ok) throw new Error(data.error || "Erreur");
+
+        const replyText = mode === "post" ? data.post : data.message;
+        if (replyText) {
+          conversationHistory.push({ role: "assistant", content: replyText });
+          appendMessage("assistant", replyText);
+        }
+
+        if (mode === "intake" && data.extracted) {
+          appendExtractedBlock(data.extracted);
+        }
+      } catch (err) {
+        setBusy(false);
+        appendMessage("assistant", "Erreur : " + err.message);
+      }
+    }
 
     closeBtn.addEventListener("click", () => overlay.remove());
     overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
@@ -2455,101 +2635,65 @@ function bindCardActions() {
         btn.classList.add("is-active");
         activeLang = btn.dataset.lang;
         conversationHistory = [];
-        runGenerate();
+        thread.innerHTML = "";
+        sendMessage(null, true);
       });
     });
 
-    async function runGenerate(extraUserMessage = null) {
-      loadingEl.classList.remove("is-hidden");
-      resultEl.value = "";
-      copyBtn.disabled = true;
-      chatSend.disabled = true;
-      generateBtn.disabled = true;
-
-      if (extraUserMessage) {
-        conversationHistory.push({ role: "user", content: extraUserMessage });
-      }
-
-      try {
-        const res = await fetch("/api/generate-post", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            item,
-            lang: activeLang,
-            messages: conversationHistory.length > 0 ? conversationHistory : []
-          })
-        });
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.error || "Erreur");
-        resultEl.value = data.post;
-        conversationHistory.push({ role: "assistant", content: data.post });
-        copyBtn.disabled = false;
-        chatSend.disabled = false;
-      } catch (err) {
-        resultEl.value = "Erreur : " + err.message;
-      } finally {
-        loadingEl.classList.add("is-hidden");
-        generateBtn.disabled = false;
-      }
-    }
-
-    generateBtn.addEventListener("click", () => {
-      conversationHistory = [];
-      runGenerate();
+    sendBtn.addEventListener("click", () => {
+      const msg = input.value.trim();
+      input.value = "";
+      sendMessage(msg);
     });
 
-    copyBtn.addEventListener("click", () => {
-      copyText(resultEl.value).then(() => {
-        const orig = copyBtn.textContent;
-        copyBtn.textContent = "Copié !";
-        setTimeout(() => { copyBtn.textContent = orig; }, 1500);
-      });
-    });
-
-    function sendChatMessage() {
-      const msg = chatInput.value.trim();
-      if (!msg || chatSend.disabled) return;
-      chatInput.value = "";
-      runGenerate(msg);
-    }
-
-    chatSend.addEventListener("click", sendChatMessage);
-    chatInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendBtn.click(); }
     });
 
     document.body.appendChild(overlay);
-    runGenerate(); // auto-generate on open
+
+    // Auto-trigger on open
+    if (mode === "post") {
+      sendMessage(null, true); // auto-generate
+    } else {
+      sendMessage(null, true); // AI greeting
+    }
   }
 
+function bindCardActions() {
   refs.cardsGrid.addEventListener("click", async (event) => {
     if (!state.isUnlocked) {
-      if (isCollaboratorMode()) {
-        const copyBtn = event.target.closest("[data-action='copy-contact-inline']");
-        if (copyBtn) {
-          copyText(copyBtn.dataset.copyValue || "").then(() => {
-            const orig = copyBtn.textContent;
-            copyBtn.textContent = "Copie !";
-            setTimeout(() => { copyBtn.textContent = orig; }, 1500);
-          });
-          return;
-        }
+      const copyPromoBtn = event.target.closest("[data-action='copy-promo-code-inline']");
+      if (copyPromoBtn) {
+        copyText(copyPromoBtn.dataset.copyValue || "").then(() => {
+          const orig = copyPromoBtn.textContent;
+          copyPromoBtn.textContent = "Copié !";
+          setTimeout(() => { copyPromoBtn.textContent = orig; }, 1500);
+        });
+        return;
+      }
 
-        const shareBtn = event.target.closest("[data-action='share-collab']");
-        if (shareBtn) {
-          shareCollaborator(shareBtn.dataset.id, shareBtn.dataset.name);
-          return;
-        }
+      const copyContactBtn = event.target.closest("[data-action='copy-contact-inline']");
+      if (copyContactBtn) {
+        copyText(copyContactBtn.dataset.copyValue || "").then(() => {
+          const orig = copyContactBtn.textContent;
+          copyContactBtn.textContent = "Copié !";
+          setTimeout(() => { copyContactBtn.textContent = orig; }, 1500);
+        });
+        return;
+      }
 
-        const card = event.target.closest(".collaborator-card.public-card");
-        if (card && !event.target.closest(".collab-panel__link") && !event.target.closest(".collab-panel__share-btn")) {
-          // If clicking the auth overlay itself, ignore (handled by the form submit)
-          if (event.target.closest(".collab-auth-overlay")) return;
-          const collabId = card.dataset.collabId || card.dataset.id;
-          showAuthOverlay(card, collabId);
-        }
+      const shareBtn = event.target.closest("[data-action='share-collab']");
+      if (shareBtn) {
+        shareCollaborator(shareBtn.dataset.id, shareBtn.dataset.name);
+        return;
+      }
+
+      const card = event.target.closest(".collaborator-card.public-card");
+      if (card && !event.target.closest(".collab-panel__link") && !event.target.closest(".collab-panel__share-btn")) {
+        if (event.target.closest(".collab-auth-overlay")) return;
+        const collabId = card.dataset.collabId || card.dataset.id;
+        showAuthOverlay(card, collabId);
       }
       return;
     }
@@ -2561,9 +2705,10 @@ function bindCardActions() {
     if (!card) return;
 
     const action = button.dataset.action;
+    const isCollab = Boolean(card.dataset.publicLink);
 
     try {
-      if (isCollaboratorMode()) {
+      if (isCollab) {
         if (action === "copy-public-link") {
           await copyText(card.dataset.publicLink || "");
           setFeedback(card, "Lien principal copie");
@@ -2602,9 +2747,9 @@ function bindCardActions() {
           return;
         }
 
-        if (action === "generate-post") {
+        if (action === "ai-assistant") {
           const collaborator = findCollaboratorById(card.dataset.id || "");
-          if (collaborator) showGeneratePostOverlay(card, collaborator);
+          if (collaborator) showAIAssistantOverlay(collaborator, "post");
           return;
         }
 
@@ -2663,9 +2808,9 @@ function bindCardActions() {
         return;
       }
 
-      if (action === "generate-post") {
+      if (action === "ai-assistant") {
         const affiliate = findAffiliateById(card.dataset.id || "");
-        if (affiliate) showGeneratePostOverlay(card, affiliate);
+        if (affiliate) showAIAssistantOverlay(affiliate, "post");
         return;
       }
 
@@ -2676,15 +2821,16 @@ function bindCardActions() {
     }
   });
 
+
   refs.cardsGrid.addEventListener("keydown", (event) => {
-    if (state.isUnlocked || !isCollaboratorMode()) return;
-    const card = event.target.closest(".collaborator-card.public-card");
+    if (state.isUnlocked) return;
+    const card = event.target.closest(".public-card");
     if (!card) return;
 
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       const isOpen = card.classList.contains("is-panel-open");
-      refs.cardsGrid.querySelectorAll(".collaborator-card.public-card.is-panel-open").forEach((c) => c.classList.remove("is-panel-open"));
+      refs.cardsGrid.querySelectorAll(".public-card.is-panel-open").forEach((c) => c.classList.remove("is-panel-open"));
       if (!isOpen) card.classList.add("is-panel-open");
     } else if (event.key === "Escape") {
       card.classList.remove("is-panel-open");
@@ -2692,42 +2838,52 @@ function bindCardActions() {
   });
 
   document.addEventListener("click", (event) => {
-    if (state.isUnlocked || !isCollaboratorMode()) return;
-    if (event.target.closest(".collaborator-card.public-card")) return;
-    refs.cardsGrid.querySelectorAll(".collaborator-card.public-card.is-panel-open").forEach((c) => c.classList.remove("is-panel-open"));
+    if (state.isUnlocked) return;
+    if (event.target.closest(".public-card")) return;
+    refs.cardsGrid.querySelectorAll(".public-card.is-panel-open").forEach((c) => c.classList.remove("is-panel-open"));
   });
 }
 
 function bindEntityToggle() {
+  // Legacy entity buttons (backward compat — kept if elements exist in DOM)
   refs.entityButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       const nextEntity = btn.dataset.entity;
       if (!nextEntity || nextEntity === state.activeEntity) return;
       state.activeEntity = nextEntity;
-
-      // Avoid carrying restrictive filters across entities (e.g. X-only collaborators hiding affiliates).
-      refs.searchInput.value = "";
-      refs.platformFilter.value = "all";
-      refs.nicheFilter.value = "all";
-      refs.formatFilter.value = "all";
-      refs.toneFilter.value = "all";
-      if (refs.upcomingBookingsToggle) refs.upcomingBookingsToggle.checked = false;
-
-      state.editingAffiliateId = null;
-      state.editingCollaboratorId = null;
-      refs.affiliateForm.reset();
-      setComposerEditMode(null);
       applyEntityMode();
       rerenderAll();
     });
   });
+
+  // New: "Tout" button for category filter
+  if (refs.categoryAllBtn) {
+    refs.categoryAllBtn.addEventListener("click", () => {
+      state.activeCategory = "all";
+      applyCategoryFilter();
+    });
+  }
+}
+
+function bindCategoryFormSelect() {
+  const fCategory = document.getElementById("fCategory");
+  if (!fCategory) return;
+  fCategory.addEventListener("change", () => {
+    applyCategoryToForm(fCategory.value);
+  });
 }
 
 function bindComposerActions() {
+  if (refs.aiAssistantBtn) {
+    refs.aiAssistantBtn.addEventListener("click", () => showAIAssistantOverlay(null, "intake"));
+  }
+
   const fSourceNotes = document.getElementById("fSourceNotes");
   if (fSourceNotes) {
     fSourceNotes.addEventListener("blur", () => {
-      if (!isCollaboratorMode()) return;
+      const fCategory = document.getElementById("fCategory");
+      const isCollabForm = fCategory ? fCategory.value !== "affiliate" : false;
+      if (!isCollabForm) return;
       const source = fSourceNotes.value.trim();
       if (!source) return;
       const extracted = extractCollaboratorInsights(source);
@@ -2770,8 +2926,12 @@ function bindComposerActions() {
 
     try {
       const formData = new FormData(refs.affiliateForm);
+      const fCategoryEl = document.getElementById("fCategory");
+      const savingAsCollab = state.editingCollaboratorId
+        ? true
+        : (state.editingAffiliateId ? false : fCategoryEl?.value !== "affiliate");
 
-      if (isCollaboratorMode()) {
+      if (savingAsCollab) {
         const collaborator = buildCollaboratorFromForm(formData);
 
         if (state.editingCollaboratorId) {
@@ -2878,11 +3038,15 @@ async function init() {
     applyEntityMode();
     mergeAffiliates();
     mergeCollaborators();
+    mergeAllItems();
+    refreshCategoryChips();
+    applyCategoryToForm("affiliate");
     renderCards();
     applyLanguage();
     applyViewMode();
     applyFilters();
     bindEntityToggle();
+    bindCategoryFormSelect();
     bindFilters();
     bindLanguageToggle();
     bindViewToggle();

@@ -276,6 +276,45 @@ a:focus-visible {
   color: #fff;
 }
 
+/* Category filter */
+.category-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.cat-btn {
+  border: 1px solid #ccb28f;
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.28rem 0.72rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.cat-btn.is-active {
+  background: #1f2329;
+  border-color: #1f2329;
+  color: #fff;
+}
+
+.cat-btn--all {
+  font-size: 0.88rem;
+  padding: 0.38rem 1.1rem;
+  font-weight: 700;
+}
+
+.cat-chips {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -567,8 +606,8 @@ textarea:focus {
   transition: opacity 180ms ease;
 }
 
-.collaborator-card.public-card:hover .collab-panel,
-.collaborator-card.public-card.is-panel-open .collab-panel {
+.public-card:hover .collab-panel,
+.public-card.is-panel-open .collab-panel {
   opacity: 1;
   pointer-events: auto;
 }
@@ -992,6 +1031,269 @@ textarea:focus {
   border-color: #c8860a;
 }
 /* --- end AI generate post overlay --- */
+
+/* --- AI Assistant overlay --- */
+.ai-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.62);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.ai-overlay__inner {
+  background: #1a1208;
+  border: 1px solid rgba(200, 134, 10, 0.45);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
+}
+
+.ai-overlay__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.1rem 0.7rem;
+  border-bottom: 1px solid rgba(200, 134, 10, 0.2);
+  flex-shrink: 0;
+  gap: 0.6rem;
+}
+
+.ai-overlay__title {
+  color: #c8860a;
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  font-family: "Space Grotesk", "Futura", sans-serif;
+}
+
+.ai-overlay__header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ai-overlay__langs {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.ai-overlay__lang-btn {
+  background: transparent;
+  border: 1px solid rgba(200, 134, 10, 0.35);
+  border-radius: 6px;
+  color: rgba(200, 134, 10, 0.65);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.18rem 0.45rem;
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+
+.ai-overlay__lang-btn.is-active {
+  background: rgba(200, 134, 10, 0.18);
+  color: #c8860a;
+  border-color: #c8860a;
+}
+
+.ai-overlay__entity-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #c8860a;
+  background: rgba(200, 134, 10, 0.12);
+  border: 1px solid rgba(200, 134, 10, 0.3);
+  border-radius: 6px;
+  padding: 0.15rem 0.5rem;
+}
+
+.ai-overlay__close {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.2rem;
+  transition: color 120ms;
+}
+
+.ai-overlay__close:hover { color: #fff; }
+
+/* Thread */
+.ai-overlay__thread {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 0;
+}
+
+.ai-overlay__msg {
+  max-width: 82%;
+  padding: 0.55rem 0.8rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  position: relative;
+}
+
+.ai-overlay__msg[data-role="user"] {
+  align-self: flex-end;
+  background: rgba(200, 134, 10, 0.18);
+  border: 1px solid rgba(200, 134, 10, 0.3);
+  color: #f5dfa4;
+}
+
+.ai-overlay__msg[data-role="assistant"] {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.ai-overlay__copy-bubble {
+  display: block;
+  margin-top: 0.45rem;
+  background: rgba(200, 134, 10, 0.15);
+  border: 1px solid rgba(200, 134, 10, 0.3);
+  border-radius: 7px;
+  color: #c8860a;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.22rem 0.65rem;
+  cursor: pointer;
+  transition: background 120ms;
+}
+
+.ai-overlay__copy-bubble:hover { background: rgba(200, 134, 10, 0.28); }
+
+/* Loading bubble */
+.ai-overlay__loading {
+  align-self: flex-start;
+  color: rgba(200, 134, 10, 0.55);
+  font-size: 1.4rem;
+  letter-spacing: 0.15em;
+  padding: 0.3rem 0.5rem;
+  animation: pulseEllipsis 1.2s ease-in-out infinite;
+}
+
+@keyframes pulseEllipsis {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* Extracted fields block */
+.ai-overlay__extracted {
+  background: rgba(200, 134, 10, 0.08);
+  border: 1px solid rgba(200, 134, 10, 0.4);
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem;
+  font-size: 0.8rem;
+  align-self: stretch;
+}
+
+.ai-overlay__extracted-header {
+  color: #c8860a;
+  font-weight: 700;
+  font-size: 0.82rem;
+  margin-bottom: 0.45rem;
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.ai-overlay__extracted-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.65rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.ai-overlay__extracted-field {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-overlay__apply-btn {
+  width: 100%;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Input row */
+.ai-overlay__input-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid rgba(200, 134, 10, 0.2);
+  flex-shrink: 0;
+  align-items: flex-end;
+}
+
+.ai-overlay__input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(200, 134, 10, 0.3);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 0.55rem 0.75rem;
+  resize: none;
+  font-family: inherit;
+  line-height: 1.45;
+}
+
+.ai-overlay__input:focus {
+  outline: none;
+  border-color: #c8860a;
+}
+
+.ai-overlay__input:disabled {
+  opacity: 0.5;
+}
+
+.ai-overlay__send {
+  padding: 0.5rem 1rem;
+  border-radius: 9px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  align-self: flex-end;
+  white-space: nowrap;
+}
+
+.ai-overlay__send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Composer AI button */
+.composer__ai-btn {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  padding: 0.4rem 1rem;
+  border-radius: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+/* --- end AI Assistant overlay --- */
 
 .preview-shell {
   border: 1px solid #ead5b7;

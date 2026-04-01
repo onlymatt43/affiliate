@@ -29,11 +29,10 @@
         </p>
 
         <div class="controls">
-          <fieldset class="entity-toggle" aria-label="Entity toggle">
-            <legend>Type</legend>
-            <button type="button" class="entity-btn is-active" data-entity="affiliates">Affiliates</button>
-            <button type="button" class="entity-btn" data-entity="collaborators">Collaborators</button>
-          </fieldset>
+          <div class="category-filter" id="categoryFilter" aria-label="Filtre par categorie">
+            <button type="button" class="cat-btn cat-btn--all is-active" data-category="all">Tout</button>
+            <span class="cat-chips" id="categoryChips"></span>
+          </div>
 
           <div class="control-group private-control">
             <label for="searchInput">Search</label>
@@ -85,7 +84,7 @@
             </select>
           </div>
 
-          <div class="control-group private-control entity-collaborator-only is-hidden">
+          <div class="control-group private-control">
             <label class="control-toggle" for="upcomingBookingsToggle">
               <input id="upcomingBookingsToggle" type="checkbox" />
               Voir seulement les RDV a venir
@@ -112,79 +111,89 @@
         <div class="composer__head">
           <h2 id="composerTitle">Ajouter une affiliation (V4)</h2>
           <p id="composerSubtitle">Les ajouts sont sauves localement dans ton navigateur (localStorage).</p>
+          <button type="button" id="aiAssistantBtn" class="accent-ai composer__ai-btn">✦ Assistant IA</button>
         </div>
 
         <form id="affiliateForm" class="composer-form">
-          <div class="quick-add-bar entity-collaborator-only is-hidden">
+          <div class="quick-add-bar form-collaborator-only is-hidden">
             <button type="button" id="quickAddToggle">⚡ Mode rapide</button>
           </div>
           <div class="composer-grid">
+            <label>
+              Catégorie
+              <select id="fCategory" name="category">
+                <option value="affiliate">Affiliate</option>
+                <option value="collaborator">Collaborator</option>
+                <option value="event">Événement</option>
+              </select>
+            </label>
+
             <label class="quick-add-field">
               Nom
               <input id="fName" name="name" type="text" />
             </label>
 
-            <label class="entity-affiliate-only">
+            <label class="form-affiliate-only">
               URL promo
               <input id="fPromoUrl" name="promoUrl" type="text" placeholder="https://..." />
             </label>
 
-            <label class="entity-affiliate-only">
+            <label class="form-affiliate-only">
               Code promo fan
               <input id="fPromoCode" name="promoCode" type="text" placeholder="MATT20" />
             </label>
 
-            <label class="entity-affiliate-only">
+            <label class="form-affiliate-only">
               URL social (optionnel)
               <input id="fSocialUrl" name="socialUrl" type="text" placeholder="https://..." />
             </label>
 
-            <label class="entity-collaborator-only is-hidden quick-add-field">
+            <label class="form-collaborator-only is-hidden quick-add-field">
               Lien principal (public)
               <input id="fPublicLink" name="publicLink" type="text" placeholder="https://..." />
             </label>
 
-            <label class="entity-collaborator-only is-hidden">
+            <label class="form-collaborator-only is-hidden">
               Liens publics suppl&eacute;mentaires (un par ligne)
-              <textarea id="fPublicLinks" name="publicLinks" rows="3" placeholder="https://onlyfans.com/...\nhttps://instagram.com/..."></textarea>
+              <textarea id="fPublicLinks" name="publicLinks" rows="3" placeholder="https://onlyfans.com/...&#10;https://instagram.com/..."></textarea>
             </label>
 
-            <label class="entity-collaborator-only is-hidden">
+            <label class="form-collaborator-only is-hidden">
               Liens prives (un par ligne)
-              <textarea id="fPrivateLinks" name="privateLinks" rows="3" placeholder="https://...\nhttps://..."></textarea>
+              <textarea id="fPrivateLinks" name="privateLinks" rows="3" placeholder="https://...&#10;https://..."></textarea>
             </label>
 
-            <label class="entity-collaborator-only is-hidden">
+            <label class="form-collaborator-only is-hidden">
               Contact
               <input id="fContact" name="contact" type="text" placeholder="email ou @handle" />
             </label>
 
-            <label class="entity-collaborator-only is-hidden">
+            <label class="form-collaborator-only is-hidden">
               Email (privé)
               <input id="fEmail" name="email" type="email" placeholder="contact@exemple.com" autocomplete="off" />
             </label>
 
-            <label class="entity-collaborator-only is-hidden quick-add-field">
+            <label class="form-collaborator-only is-hidden quick-add-field">
               Infos brutes a parser
               <textarea id="fSourceNotes" name="sourceNotes" rows="5" placeholder="Colle ici des messages, liens, emails, horaires..."></textarea>
             </label>
 
-            <label class="entity-collaborator-only is-hidden">
+            <label class="form-collaborator-only is-hidden">
               Date booking
               <input id="fBookingDate" name="bookingDate" type="text" placeholder="25th" />
             </label>
 
-            <label class="entity-collaborator-only is-hidden">
+            <label class="form-collaborator-only is-hidden">
               Heure booking
               <input id="fBookingTime" name="bookingTime" type="text" placeholder="11AM" />
             </label>
 
-            <label class="entity-collaborator-only is-hidden">
+            <label class="form-collaborator-only is-hidden">
               Lieu booking
               <input id="fBookingLocation" name="bookingLocation" type="text" placeholder="Ritual Hotel" />
             </label>
 
-            <label class="entity-collaborator-only is-hidden">
+            <label class="form-collaborator-only is-hidden">
               Rates / Conditions / Notes
               <textarea id="fRates" name="rates" rows="3" placeholder="Tarifs, disponibilite, conditions, note de booking..."></textarea>
             </label>
@@ -204,7 +213,7 @@
               <input id="fLogo3" name="logo3" type="text" placeholder="https://..." />
             </label>
 
-            <label class="entity-affiliate-only">
+            <label class="form-affiliate-only">
               Mentions @
               <input id="fMentions" name="mentions" type="text" placeholder="@onlymatt @marque" />
             </label>

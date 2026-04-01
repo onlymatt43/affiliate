@@ -1,6 +1,7 @@
 [
   {
     "id": "aff-002",
+    "category": "affiliate",
     "name": "BEISAR",
     "platform": "onlyfans",
     "niche": "adult-toys",
@@ -26,6 +27,7 @@
   },
   {
     "id": "aff-001",
+    "category": "affiliate",
     "name": "Nom Affiliate",
     "platform": "instagram",
     "niche": "fitness",

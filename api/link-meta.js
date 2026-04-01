@@ -81,6 +81,11 @@ module.exports = async function handler(req, res) {
       headers: { "User-Agent": "affiliate-hub/1.0 (+https://affiliates.onlymatt.ca)" }
     });
 
+    if (!response.ok) {
+      res.status(200).json({ ok: true, image: "", title: "", description: "" });
+      return;
+    }
+
     const html = await response.text();
     const rawImage =
       extractMeta(html, "og:image") ||
