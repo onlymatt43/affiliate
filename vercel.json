@@ -25,6 +25,9 @@
     }
   ],
   "rewrites": [
+    { "source": "/api/login", "destination": "/api/auth?op=login" },
+    { "source": "/api/logout", "destination": "/api/auth?op=logout" },
+    { "source": "/api/session", "destination": "/api/auth?op=session" },
     { "source": "/rv/:id", "destination": "/api/share?id=:id" },
     { "source": "/api/auth/twitter/init", "destination": "/api/auth/twitter/init" },
     { "source": "/api/auth/twitter/callback", "destination": "/api/auth/twitter/callback" },
