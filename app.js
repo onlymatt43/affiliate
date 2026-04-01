@@ -242,7 +242,7 @@ function normalizeLogoUrls(raw) {
     deduped.push(url);
   });
 
-  return deduped.slice(0, 3);
+  return deduped;
 }
 
 function normalizeMediaUrls(raw) {
@@ -1519,9 +1519,7 @@ function populateFormFromAffiliate(affiliate) {
   form.elements.promoUrl.value = affiliate.promoUrl || "";
   form.elements.promoCode.value = affiliate.promoCode || "";
   form.elements.socialUrl.value = affiliate.socialUrl || "";
-  form.elements.logo1.value = affiliate.logos?.[0] || "";
-  form.elements.logo2.value = affiliate.logos?.[1] || "";
-  form.elements.logo3.value = affiliate.logos?.[2] || "";
+  form.elements.logos.value = (affiliate.logos || []).join("\n");
   form.elements.mentions.value = affiliate.mentions || "";
   form.elements.tags.value = affiliate.fr?.tags || affiliate.en?.tags || "";
   form.elements.specs.value = affiliate.fr?.specs || affiliate.en?.specs || "";
@@ -1547,9 +1545,7 @@ function populateFormFromCollaborator(collaborator) {
   form.elements.bookingDate.value = collaborator.booking?.dateLabel || "";
   form.elements.bookingTime.value = collaborator.booking?.timeLabel || "";
   form.elements.bookingLocation.value = collaborator.booking?.location || "";
-  form.elements.logo1.value = collaborator.logos?.[0] || "";
-  form.elements.logo2.value = collaborator.logos?.[1] || "";
-  form.elements.logo3.value = collaborator.logos?.[2] || "";
+  form.elements.logos.value = (collaborator.logos || []).join("\n");
   form.elements.tags.value = collaborator.fr?.tags || collaborator.en?.tags || "";
   form.elements.specs.value = collaborator.fr?.specs || collaborator.en?.specs || "";
   form.elements.caption.value = collaborator.fr?.caption || collaborator.en?.caption || "";
@@ -1814,11 +1810,7 @@ function buildAffiliateFromForm(formData) {
     promoCode: toText(formData.get("promoCode")),
     socialUrl: toText(formData.get("socialUrl")),
     mentions: toText(formData.get("mentions")),
-    logos: [
-      toText(formData.get("logo1")),
-      toText(formData.get("logo2")),
-      toText(formData.get("logo3"))
-    ],
+    logos: toText(formData.get("logos")),
     mediaImages: toText(formData.get("mediaImages")),
     mediaVideos: toText(formData.get("mediaVideos")),
     postRequirements: toText(formData.get("postRequirements")),
@@ -1875,11 +1867,7 @@ function buildCollaboratorFromForm(formData) {
       location: toText(formData.get("bookingLocation")) || extracted.booking.location,
       note: extracted.booking.note
     },
-    logos: [
-      toText(formData.get("logo1")),
-      toText(formData.get("logo2")),
-      toText(formData.get("logo3"))
-    ],
+    logos: toText(formData.get("logos")),
     mediaImages: toText(formData.get("mediaImages")),
     mediaVideos: toText(formData.get("mediaVideos")),
     fr: {
