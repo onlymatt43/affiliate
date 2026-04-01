@@ -187,6 +187,13 @@ function toText(value) {
   return String(value || "").trim();
 }
 
+function normalizeAffiliateCategory(value) {
+  const normalized = toText(value).toLowerCase();
+  if (!normalized) return "affiliate";
+  if (normalized === "event") return "affiliate";
+  return normalized;
+}
+
 function isValidHttpUrl(value) {
   try {
     const parsed = new URL(value);
@@ -278,7 +285,7 @@ function normalizeAffiliateShape(raw, index) {
 
   return {
     id: raw.id ? String(raw.id).trim() : `${slugify(name) || "affiliate"}-${Date.now()}-${index}`,
-    category: toText(raw.category) || "affiliate",
+    category: normalizeAffiliateCategory(raw.category),
     name,
     platform,
     niche,
