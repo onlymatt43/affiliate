@@ -187,15 +187,18 @@ function toText(value) {
   return String(value || "").trim();
 }
 
+const VALID_CATEGORIES = ["affiliate", "collaborator", "event"];
+
 function normalizeAffiliateCategory(value) {
   const normalized = toText(value).toLowerCase();
-  if (!normalized) return "affiliate";
-  if (normalized === "event") return "affiliate";
+  if (!normalized || !VALID_CATEGORIES.includes(normalized)) return "affiliate";
   return normalized;
 }
 
-function normalizeCollaboratorCategory() {
-  return "collaborator";
+function normalizeCollaboratorCategory(value) {
+  const normalized = toText(value).toLowerCase();
+  if (!normalized || !VALID_CATEGORIES.includes(normalized)) return "collaborator";
+  return normalized;
 }
 
 function isValidHttpUrl(value) {
@@ -880,7 +883,7 @@ function normalizeCollaboratorShape(raw, index) {
 
   return {
     id: raw.id ? String(raw.id).trim() : `${slugify(name) || "collaborator"}-${Date.now()}-${index}`,
-    category: normalizeCollaboratorCategory(),
+    category: normalizeCollaboratorCategory(raw.category),
     name,
     platform,
     niche,
@@ -1784,6 +1787,7 @@ function setFormFeedback(message, isError = false) {
 function buildAffiliateFromForm(formData) {
   const raw = {
     id: `${slugify(toText(formData.get("name")) || "affiliate")}-${Date.now()}`,
+    category: toText(formData.get("category")),
     name: toText(formData.get("name")),
     platform: toText(formData.get("platform")),
     niche: toText(formData.get("niche")),
@@ -1833,6 +1837,7 @@ function buildCollaboratorFromForm(formData) {
 
   const raw = {
     id: `${slugify(name || "collaborator")}-${Date.now()}`,
+    category: toText(formData.get("category")),
     name,
     platform: detectPlatformFromUrl(publicLink) || toText(formData.get("platform")),
     niche: toText(formData.get("niche")),
@@ -2224,21 +2229,19 @@ function applyEntityMode() {
 }
 
 function applyCategoryToForm(categoryValue) {
-  const isCollab = categoryValue === "collaborator";
   document.querySelectorAll(".form-affiliate-only").forEach((el) => {
-    el.classList.toggle("is-hidden", isCollab);
+    el.classList.remove("is-hidden");
   });
   document.querySelectorAll(".form-collaborator-only").forEach((el) => {
-    el.classList.toggle("is-hidden", !isCollab);
+    el.classList.remove("is-hidden");
   });
 
+  const titles = { affiliate: "Ajouter une affiliation", collaborator: "Ajouter un collaborator", event: "Ajouter un événement" };
   if (refs.composerTitle) {
-    refs.composerTitle.textContent = isCollab ? "Ajouter un collaborator" : "Ajouter une affiliation";
+    refs.composerTitle.textContent = titles[categoryValue] || titles.affiliate;
   }
   if (refs.composerSubtitle) {
-    refs.composerSubtitle.textContent = isCollab
-      ? "Colle un bloc brut et l'app extrait lien principal, contacts et booking quand possible."
-      : "Les ajouts sont sauves localement dans ton navigateur (localStorage).";
+    refs.composerSubtitle.textContent = "Les ajouts sont sauves localement dans ton navigateur (localStorage).";
   }
 }
 
@@ -2952,10 +2955,10 @@ function bindComposerActions() {
 
     try {
       const formData = new FormData(refs.affiliateForm);
-      const fCategoryEl = document.getElementById("fCategory");
+      const publicLinkValue = toText(formData.get("publicLink"));
       const savingAsCollab = state.editingCollaboratorId
         ? true
-        : (state.editingAffiliateId ? false : fCategoryEl?.value === "collaborator");
+        : (state.editingAffiliateId ? false : Boolean(publicLinkValue));
 
       if (savingAsCollab) {
         const collaborator = buildCollaboratorFromForm(formData);
