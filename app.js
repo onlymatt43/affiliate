@@ -194,6 +194,10 @@ function normalizeAffiliateCategory(value) {
   return normalized;
 }
 
+function normalizeCollaboratorCategory() {
+  return "collaborator";
+}
+
 function isValidHttpUrl(value) {
   try {
     const parsed = new URL(value);
@@ -876,7 +880,7 @@ function normalizeCollaboratorShape(raw, index) {
 
   return {
     id: raw.id ? String(raw.id).trim() : `${slugify(name) || "collaborator"}-${Date.now()}-${index}`,
-    category: toText(raw.category) || "collaborator",
+    category: normalizeCollaboratorCategory(),
     name,
     platform,
     niche,
