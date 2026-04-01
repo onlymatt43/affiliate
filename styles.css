@@ -1343,6 +1343,20 @@ textarea:focus {
   padding: 0.25rem;
 }
 
+.media-strip {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  padding: 0.25rem 0;
+}
+
+.media-strip__img,
+.media-strip__vid {
+  max-height: 80px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
 .card-head__actions {
   display: flex;
   align-items: center;

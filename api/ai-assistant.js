@@ -14,7 +14,9 @@ const AFFILIATE_SCHEMA = `Fiche AFFILIÉ (type: "affiliate"):
   niche         — "lifestyle" | "adult-toys" | "business" | "autre"
   format        — "post" | "short-video" | "thread" | "reel"
   tone          — "authority" | "story" | "motivation"
-  logos         — URLs de logos (jusqu'à 3, séparés par des virgules ou nouvelles lignes)`;
+  logos         — URLs de logos (jusqu'à 3, séparés par des virgules ou nouvelles lignes)
+  mediaImages   — URLs d'images (une par ligne)
+  mediaVideos   — URLs de vidéos (une par ligne)`;
 
 const COLLABORATOR_SCHEMA = `Fiche COLLABORATEUR (type: "collaborator"):
   name          — Nom du/de la collaborateur/trice (requis)
@@ -31,7 +33,9 @@ const COLLABORATOR_SCHEMA = `Fiche COLLABORATEUR (type: "collaborator"):
   niche         — "lifestyle" | "adult-toys" | "business" | "autre"
   format        — "post" | "short-video" | "thread" | "reel"
   tone          — "authority" | "story" | "motivation"
-  logos         — URLs de logos (jusqu'à 3)`;
+  logos         — URLs de logos (jusqu'à 3)
+  mediaImages   — URLs d'images (une par ligne)
+  mediaVideos   — URLs de vidéos (une par ligne)`;
 
 const VOICE_GUIDE = `Ton de voix pour les posts (IMPORTANT — respecte ça en tout temps):
 - Court. Très court. 3-5 phrases max.
@@ -81,6 +85,10 @@ function buildPostSystemPrompt(item, lang) {
   if (specs) lines.push(`Specs: ${specs}`);
   if (tags) lines.push(`Hashtags à inclure: ${tags}`);
   if (caption) lines.push(`Caption existante: ${caption}`);
+  const images = Array.isArray(item.mediaImages) ? item.mediaImages.filter(Boolean) : [];
+  if (images.length) lines.push(`Images: ${images.join(", ")}`);
+  const videos = Array.isArray(item.mediaVideos) ? item.mediaVideos.filter(Boolean) : [];
+  if (videos.length) lines.push(`Vidéos: ${videos.join(", ")}`);
 
   const contextBlock = lines.join("\n");
   const typeLabel = isAffiliate ? "promotionnel" : "de collaboration";

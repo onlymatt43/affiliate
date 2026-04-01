@@ -245,6 +245,12 @@ function normalizeLogoUrls(raw) {
   return deduped.slice(0, 3);
 }
 
+function normalizeMediaUrls(raw) {
+  if (!raw) return [];
+  const items = Array.isArray(raw) ? raw : String(raw).split(/\n|,/g);
+  return items.map((u) => String(u || "").trim()).filter((u) => isValidHttpUrl(u));
+}
+
 function logoStripMarkup(logos, affiliateName) {
   if (!Array.isArray(logos) || logos.length === 0) return "";
 
@@ -258,6 +264,22 @@ function logoStripMarkup(logos, affiliateName) {
         .join("")}
     </div>
   `;
+}
+
+function mediaStripMarkup(item) {
+  const images = item.mediaImages || [];
+  const videos = item.mediaVideos || [];
+  if (!images.length && !videos.length) return "";
+
+  const imgTags = images.map((url) =>
+    `<img src="${escapeHtml(url)}" alt="Media ${escapeHtml(item.name)}" class="media-strip__img" loading="lazy" onerror="this.classList.add('is-hidden')" />`
+  ).join("");
+
+  const vidTags = videos.map((url) =>
+    `<video src="${escapeHtml(url)}" class="media-strip__vid" preload="metadata" muted playsinline loop onerror="this.classList.add('is-hidden')"></video>`
+  ).join("");
+
+  return `<div class="media-strip">${imgTags}${vidTags}</div>`;
 }
 
 function normalizeAffiliateShape(raw, index) {
@@ -305,6 +327,8 @@ function normalizeAffiliateShape(raw, index) {
     postRequirements,
     specificities,
     logos,
+    mediaImages: normalizeMediaUrls(raw.mediaImages),
+    mediaVideos: normalizeMediaUrls(raw.mediaVideos),
     fr: {
       tags: toText(fr.tags),
       specs: toText(fr.specs),
@@ -898,6 +922,8 @@ function normalizeCollaboratorShape(raw, index) {
     sourceNotes: toText(raw.sourceNotes),
     booking,
     logos: normalizeLogoUrls(raw.logos),
+    mediaImages: normalizeMediaUrls(raw.mediaImages),
+    mediaVideos: normalizeMediaUrls(raw.mediaVideos),
     fr: {
       tags: toText(fr.tags),
       specs: toText(fr.specs),
@@ -1034,6 +1060,7 @@ function publicCardMarkup(item, archetype = "default") {
       </div>
       <div class="collab-overlay">
         ${logoStripMarkup(item.logos, item.name)}
+        ${mediaStripMarkup(item)}
         <div class="collab-info">
           <h2 style="${nameStyle}">${escapeHtml(item.name)}</h2>
         </div>
@@ -1508,6 +1535,8 @@ function populateFormFromAffiliate(affiliate) {
   form.elements.enCaption.value = affiliate.en?.caption || "";
   form.elements.postRequirements.value = affiliate.postRequirements || "";
   form.elements.specificities.value = affiliate.specificities || "";
+  form.elements.mediaImages.value = (affiliate.mediaImages || []).join("\n");
+  form.elements.mediaVideos.value = (affiliate.mediaVideos || []).join("\n");
   const fCatEl = document.getElementById("fCategory");
   if (fCatEl) { fCatEl.value = affiliate.category || "affiliate"; applyCategoryToForm(fCatEl.value); }
 }
@@ -1538,6 +1567,8 @@ function populateFormFromCollaborator(collaborator) {
   form.elements.enSpecs.value = collaborator.en?.specs || "";
   form.elements.frCaption.value = collaborator.fr?.caption || "";
   form.elements.enCaption.value = collaborator.en?.caption || "";
+  form.elements.mediaImages.value = (collaborator.mediaImages || []).join("\n");
+  form.elements.mediaVideos.value = (collaborator.mediaVideos || []).join("\n");
 
   form.elements.promoUrl.value = "";
   form.elements.promoCode.value = "";
@@ -1802,6 +1833,8 @@ function buildAffiliateFromForm(formData) {
       toText(formData.get("logo2")),
       toText(formData.get("logo3"))
     ],
+    mediaImages: toText(formData.get("mediaImages")),
+    mediaVideos: toText(formData.get("mediaVideos")),
     postRequirements: toText(formData.get("postRequirements")),
     specificities: toText(formData.get("specificities")),
     fr: {
@@ -1861,6 +1894,8 @@ function buildCollaboratorFromForm(formData) {
       toText(formData.get("logo2")),
       toText(formData.get("logo3"))
     ],
+    mediaImages: toText(formData.get("mediaImages")),
+    mediaVideos: toText(formData.get("mediaVideos")),
     fr: {
       tags: toText(formData.get("frTags")),
       specs: toText(formData.get("frSpecs")),
