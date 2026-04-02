@@ -25,6 +25,7 @@ const state = {
   editingAffiliateId: null,
   editingCollaboratorId: null,
   pendingVisibility: null,
+  pendingTaggedUrls: null,
   affiliates: [],
   baseAffiliates: [],
   localAffiliates: [],
@@ -193,6 +194,7 @@ const VALID_CATEGORIES = ["affiliate", "collaborator", "event"];
 const DEFAULT_AFFILIATE_VISIBILITY = {
   name: "both",
   primaryUrl: "both",
+  tags: "public",
   promoCode: "public",
   socialUrl: "private",
   mentions: "private",
@@ -206,8 +208,10 @@ const DEFAULT_AFFILIATE_VISIBILITY = {
 const DEFAULT_COLLABORATOR_VISIBILITY = {
   name: "both",
   primaryUrl: "both",
+  tags: "public",
   publicLinks: "public",
   privateLinks: "private",
+  taggedUrls: "private",
   contact: "public",
   email: "private",
   rates: "private",
@@ -405,6 +409,41 @@ function normalizePrivateLinks(raw) {
   return deduped;
 }
 
+function normalizeTaggedUrls(raw) {
+  if (!Array.isArray(raw)) return [];
+
+  const seen = new Set();
+  const out = [];
+  raw.forEach((entry) => {
+    if (!entry || typeof entry !== "object") return;
+    const label = toText(entry.label) || "Link";
+    const url = toText(entry.url);
+    if (!isValidHttpUrl(url)) return;
+
+    const visibilityRaw = toText(entry.visibility || "private").toLowerCase();
+    const visibility = visibilityRaw === "public" || visibilityRaw === "both" ? visibilityRaw : "private";
+    const tags = Array.isArray(entry.tags) ? entry.tags.map((tag) => toText(tag)).filter(Boolean) : [];
+    const dedupKey = `${url}|${visibility}|${tags.join("|")}`;
+    if (seen.has(dedupKey)) return;
+    seen.add(dedupKey);
+    out.push({ label, url, visibility, tags });
+  });
+
+  return out;
+}
+
+function parseTagTokens(value) {
+  return toText(value)
+    .split(/[\n,]/g)
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function tagBadgesMarkup(tags) {
+  if (!Array.isArray(tags) || tags.length === 0) return "";
+  return `<div class="tag-badges">${tags.map((tag) => `<button type="button" class="tag-badge" data-action="copy-inline-value" data-copy-value="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`).join("")}</div>`;
+}
+
 function normalizeBooking(raw) {
   const booking = raw && typeof raw === "object" ? raw : {};
 
@@ -552,17 +591,126 @@ async function swapCardToPrivate(collabId) {
     return;
   }
 
-  const platformLabel = PLATFORM_LABELS[collab.platform] || collab.platform;
-  const nicheLabel = NICHE_LABELS[collab.niche] || collab.niche;
-  const privateMarkup = collaboratorPrivateCardMarkup(collab, platformLabel, nicheLabel);
+  const privateMarkup = privateCardMarkup(collab);
   const tmp = document.createElement("div");
   tmp.innerHTML = privateMarkup.trim();
   const newCard = tmp.firstElementChild;
   if (newCard) {
     card.replaceWith(newCard);
+    enhanceUnlockedCollaboratorCard(newCard, collabId, collab);
     newCard.classList.add("is-shared");
     setTimeout(() => newCard.classList.remove("is-shared"), 2000);
   }
+}
+
+function enhanceUnlockedCollaboratorCard(cardEl, collabId, collab) {
+  if (!cardEl || !collabId) return;
+  cardEl.classList.add("collab-private-unlocked");
+
+  cardEl.querySelectorAll("[data-action='edit'], [data-action='duplicate'], [data-action='ai-assistant']").forEach((btn) => btn.remove());
+
+  const actions = cardEl.querySelector(".card-actions");
+  if (!actions) return;
+
+  const booking = normalizeBooking(collab.booking || {});
+  const taggedUrlDefaults = {
+    label: "",
+    url: "",
+    tags: "",
+    visibility: "private"
+  };
+
+  const controls = document.createElement("section");
+  controls.className = "content-block collab-unlocked-tools";
+  controls.innerHTML = `
+    <h3>Manage your card</h3>
+    <form class="collab-inline-form" data-form="booking">
+      <label>Date</label>
+      <input name="dateLabel" value="${escapeHtml(booking.dateLabel)}" placeholder="April 25" />
+      <label>Time</label>
+      <input name="timeLabel" value="${escapeHtml(booking.timeLabel)}" placeholder="2pm" />
+      <label>Location</label>
+      <input name="location" value="${escapeHtml(booking.location)}" placeholder="Montreal" />
+      <label>Note</label>
+      <input name="note" value="${escapeHtml(booking.note)}" placeholder="Optional note" />
+      <button type="submit" class="inline-save-btn">Save booking</button>
+    </form>
+    <form class="collab-inline-form" data-form="tagged-url">
+      <label>URL label (English)</label>
+      <input name="label" value="${escapeHtml(taggedUrlDefaults.label)}" placeholder="Consent form" />
+      <label>URL</label>
+      <input name="url" value="${escapeHtml(taggedUrlDefaults.url)}" placeholder="https://..." />
+      <label>Tags (comma separated, English)</label>
+      <input name="tags" value="${escapeHtml(taggedUrlDefaults.tags)}" placeholder="grabbys, april-20-26" />
+      <label>Visibility</label>
+      <select name="visibility">
+        <option value="private" selected>private</option>
+        <option value="public">public</option>
+        <option value="both">both</option>
+      </select>
+      <button type="submit" class="inline-save-btn">Add tagged URL</button>
+    </form>
+  `;
+
+  actions.insertAdjacentElement("beforebegin", controls);
+
+  const bookingForm = controls.querySelector("form[data-form='booking']");
+  bookingForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(bookingForm);
+    try {
+      const response = await fetch(`/api/collaborators/private?id=${encodeURIComponent(collabId)}&op=update-booking`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          booking: {
+            dateLabel: toText(formData.get("dateLabel")),
+            timeLabel: toText(formData.get("timeLabel")),
+            location: toText(formData.get("location")),
+            note: toText(formData.get("note"))
+          }
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || "Booking save failed");
+      if (payload?.warning?.message) {
+        setFeedback(cardEl, payload.warning.message, true);
+      } else {
+        setFeedback(cardEl, "Booking saved");
+      }
+      await swapCardToPrivate(collabId);
+    } catch (error) {
+      const message = String(error?.message || "Booking update failed");
+      setFeedback(cardEl, message, true);
+    }
+  });
+
+  const taggedUrlForm = controls.querySelector("form[data-form='tagged-url']");
+  taggedUrlForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(taggedUrlForm);
+    try {
+      const response = await fetch(`/api/collaborators/private?id=${encodeURIComponent(collabId)}&op=add-tagged-url`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          taggedUrl: {
+            label: toText(formData.get("label")),
+            url: toText(formData.get("url")),
+            tags: parseTagTokens(formData.get("tags")),
+            visibility: toText(formData.get("visibility"))
+          }
+        })
+      });
+      if (!response.ok) throw new Error("Tagged URL save failed");
+      setFeedback(cardEl, "Tagged URL added");
+      await swapCardToPrivate(collabId);
+    } catch (_) {
+      setFeedback(cardEl, "Tagged URL failed", true);
+    }
+  });
 }
 
 function showAuthOverlay(card, collabId, errorMsg = null) {
@@ -951,6 +1099,7 @@ function normalizeCollaboratorShape(raw, index) {
     primaryUrl: primaryUrlRaw,
     publicLinks: normalizePrivateLinks(raw.publicLinks),
     privateLinks: normalizePrivateLinks(raw.privateLinks),
+    taggedUrls: normalizeTaggedUrls(raw.taggedUrls),
     contact: toText(raw.contact),
     email: toText(raw.email),
     rates: toText(raw.rates),
@@ -1037,6 +1186,8 @@ function publicCardMarkup(item, archetype = "default") {
   const bookingBadgeText = isCollabType && isPublicVisible(item, "booking") ? bookingSummary(item.booking) : "";
   const bookingBadge = bookingBadgeText ? `<span class="booking-badge">${escapeHtml(bookingBadgeText)}</span>` : "";
   const bookingTs = isCollabType ? getBookingTimestamp(item) : "";
+  const tags = parseTagTokens(item.fr?.tags || item.en?.tags || "");
+  const publicTagsMarkup = isPublicVisible(item, "tags") ? tagBadgesMarkup(tags) : "";
 
   let panelContent;
   if (isCollabType) {
@@ -1052,11 +1203,21 @@ function publicCardMarkup(item, archetype = "default") {
     if (isPublicVisible(item, "publicLinks")) {
       (item.publicLinks || []).forEach((pl) => allLinks.push(pl));
     }
+    const taggedUrls = isPublicVisible(item, "taggedUrls")
+      ? (item.taggedUrls || []).filter((entry) => entry.visibility === "public" || entry.visibility === "both")
+      : [];
     const linksMarkup = allLinks
       .map((l) => `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener noreferrer" class="collab-panel__link">${escapeHtml(l.label || l.url)}</a>`)
       .join("");
+    const taggedUrlMarkup = taggedUrls
+      .map((entry) => {
+        const tagsMarkup = entry.tags?.length ? `<span class="tagged-url__tags">${entry.tags.map((tag) => `<span class="tagged-url__tag">${escapeHtml(tag)}</span>`).join("")}</span>` : "";
+        const copyValue = `${entry.label}: ${entry.url}${entry.tags?.length ? ` [${entry.tags.join(", ")}]` : ""}`;
+        return `<button type="button" class="tagged-url-row" data-action="copy-inline-value" data-copy-value="${escapeHtml(copyValue)}"><span class="tagged-url__label">${escapeHtml(entry.label)}</span><span class="tagged-url__url">${escapeHtml(entry.url)}</span>${tagsMarkup}</button>`;
+      })
+      .join("");
     const contactMarkup = item.contact && isPublicVisible(item, "contact")
-      ? `<div class="collab-panel__copy-row" data-action="copy-contact-inline" data-copy-value="${escapeHtml(item.contact)}" title="Cliquer pour copier">${escapeHtml(item.contact)}</div>`
+      ? `<div class="collab-panel__copy-row" data-action="copy-inline-value" data-copy-value="${escapeHtml(item.contact)}" title="Cliquer pour copier">${escapeHtml(item.contact)}</div>`
       : "";
     const shareBtn = bookingBadgeText && isPublicVisible(item, "booking")
       ? `<button type="button" class="collab-panel__share-btn" data-action="share-collab" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}">Partager RV</button>`
@@ -1064,12 +1225,13 @@ function publicCardMarkup(item, archetype = "default") {
     panelContent = `
       <div class="collab-panel__name">${escapeHtml(item.name)}</div>
       <div class="collab-panel__links">${linksMarkup}</div>
+      ${taggedUrlMarkup ? `<div class="tagged-url-list">${taggedUrlMarkup}</div>` : ""}
       ${contactMarkup}
       ${shareBtn}
     `;
   } else {
     const promoCodeMarkup = item.promoCode && isPublicVisible(item, "promoCode")
-      ? `<div class="collab-panel__copy-row" data-action="copy-promo-code-inline" data-copy-value="${escapeHtml(item.promoCode)}" title="Cliquer pour copier le code">Code : ${escapeHtml(item.promoCode)}</div>`
+      ? `<div class="collab-panel__copy-row" data-action="copy-inline-value" data-copy-value="${escapeHtml(item.promoCode)}" title="Cliquer pour copier le code">Code : ${escapeHtml(item.promoCode)}</div>`
       : "";
     const primaryUrlMarkup = item.primaryUrl && isPublicVisible(item, "primaryUrl")
       ? `<a href="${escapeHtml(item.primaryUrl)}" target="_blank" rel="noopener noreferrer" class="collab-panel__link">${escapeHtml(item.primaryUrl)}</a>`
@@ -1103,6 +1265,7 @@ function publicCardMarkup(item, archetype = "default") {
         ${isPublicVisible(item, "logos") ? logoStripMarkup(item.logos, item.name) : ""}
         ${isPublicVisible(item, "mediaImages") || isPublicVisible(item, "mediaVideos") ? mediaStripMarkup(item) : ""}
         <div class="collab-info">
+          ${publicTagsMarkup}
           <h2 style="${nameStyle}">${escapeHtml(item.name)}</h2>
         </div>
       </div>
@@ -1126,6 +1289,9 @@ function privateCardMarkup(item) {
   if (isCollabType) {
     const privateLinksText = item.privateLinks?.length
       ? item.privateLinks.map((entry) => `${entry.label}: ${entry.url}`).join("\n")
+      : "-";
+    const taggedUrlsText = item.taggedUrls?.length
+      ? item.taggedUrls.map((entry) => `${entry.label}: ${entry.url}${entry.tags?.length ? ` [${entry.tags.join(", ")}]` : ""} (${entry.visibility || "private"})`).join("\n")
       : "-";
     const bookingText = bookingSummary(item.booking) || "-";
     const bookingTs = getBookingTimestamp(item);
@@ -1152,6 +1318,10 @@ function privateCardMarkup(item) {
         <div class="kit-row">
           <span class="kit-label">Liens prives</span>
           <span class="kit-value">${escapeHtml(privateLinksText)}</span>
+        </div>
+        <div class="kit-row">
+          <span class="kit-label">Tagged URLs</span>
+          <span class="kit-value">${escapeHtml(taggedUrlsText)}</span>
         </div>
       </section>
     `;
@@ -1920,6 +2090,7 @@ function buildCollaboratorFromForm(formData) {
       specs: toText(formData.get("specs")),
       caption: toText(formData.get("caption"))
     },
+    taggedUrls: state.pendingTaggedUrls || undefined,
     visibility: state.pendingVisibility || undefined
   };
 
@@ -2628,6 +2799,7 @@ function showAIAssistantOverlay(item, mode) {
 
         // Preserve AI-assigned visibility for form submit
         state.pendingVisibility = fields.visibility || null;
+        state.pendingTaggedUrls = Array.isArray(fields.taggedUrls) ? fields.taggedUrls : null;
 
         if (extracted.entityType === "collaborator") {
           populateFormFromCollaborator(fields);
@@ -2790,23 +2962,33 @@ function showAIAssistantOverlay(item, mode) {
 function bindCardActions() {
   refs.cardsGrid.addEventListener("click", async (event) => {
     if (!state.isUnlocked) {
-      const copyPromoBtn = event.target.closest("[data-action='copy-promo-code-inline']");
-      if (copyPromoBtn) {
-        copyText(copyPromoBtn.dataset.copyValue || "").then(() => {
-          const orig = copyPromoBtn.textContent;
-          copyPromoBtn.textContent = "Copié !";
-          setTimeout(() => { copyPromoBtn.textContent = orig; }, 1500);
+      const copyInlineBtn = event.target.closest("[data-action='copy-inline-value']");
+      if (copyInlineBtn) {
+        copyText(copyInlineBtn.dataset.copyValue || "").then(() => {
+          const orig = copyInlineBtn.textContent;
+          copyInlineBtn.textContent = "Copied";
+          setTimeout(() => { copyInlineBtn.textContent = orig; }, 1500);
         });
         return;
       }
 
-      const copyContactBtn = event.target.closest("[data-action='copy-contact-inline']");
-      if (copyContactBtn) {
-        copyText(copyContactBtn.dataset.copyValue || "").then(() => {
-          const orig = copyContactBtn.textContent;
-          copyContactBtn.textContent = "Copié !";
-          setTimeout(() => { copyContactBtn.textContent = orig; }, 1500);
-        });
+      const privateUnlockedCard = event.target.closest(".affiliate-card.collaborator-card:not(.public-card)");
+      if (privateUnlockedCard) {
+        const actionButton = event.target.closest("button[data-action]");
+        if (!actionButton) return;
+        if (actionButton.dataset.action === "copy-primary-url") {
+          await copyText(privateUnlockedCard.dataset.primaryUrl || "");
+          setFeedback(privateUnlockedCard, "Primary URL copied");
+        } else if (actionButton.dataset.action === "copy-contact") {
+          await copyText(privateUnlockedCard.dataset.contact || "");
+          setFeedback(privateUnlockedCard, "Contact copied");
+        } else if (actionButton.dataset.action === "copy-collaboration-kit") {
+          await copyText(getAffiliationKitText(privateUnlockedCard));
+          setFeedback(privateUnlockedCard, "Kit copied");
+        } else if (actionButton.dataset.action === "copy-all") {
+          await copyText(getCopyAllText(privateUnlockedCard));
+          setFeedback(privateUnlockedCard, "Card copied");
+        }
         return;
       }
 
@@ -3145,6 +3327,7 @@ function bindComposerActions() {
       setFormFeedback(error.message || "Impossible d'ajouter cette affiliation.", true);
     } finally {
       state.pendingVisibility = null;
+      state.pendingTaggedUrls = null;
     }
   });
 
@@ -3152,6 +3335,8 @@ function bindComposerActions() {
     refs.affiliateForm.reset();
     state.editingAffiliateId = null;
     state.editingCollaboratorId = null;
+    state.pendingVisibility = null;
+    state.pendingTaggedUrls = null;
     setComposerEditMode(null);
     setFormFeedback("Edition annulee.");
   });

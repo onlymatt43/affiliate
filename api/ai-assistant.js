@@ -28,6 +28,7 @@ const COLLABORATOR_SCHEMA = `Fiche COLLABORATEUR (type: "collaborator"):
   rates         — Tarifs / conditions / notes financières
   publicLinks   — Liens supplémentaires publics (un par ligne, format "Label: url" ou juste "url")
   privateLinks  — Liens privés (même format)
+  taggedUrls    — URLs taggées (array): [{"label":"...","url":"https://...","tags":["..."],"visibility":"public|private|both"}]
   bookingDate   — Date du booking (ex: "25 avril", "April 25")
   bookingTime   — Heure (ex: "14h00", "2pm")
   bookingLocation — Lieu (ex: "Montréal", "DM pour adresse")
@@ -84,6 +85,10 @@ function buildPostSystemPrompt(item, lang) {
     if (booking.note) lines.push(`Note booking: ${booking.note}`);
     const pubLinks = Array.isArray(item.publicLinks) ? item.publicLinks.map((l) => l.url || l).filter(Boolean) : [];
     if (pubLinks.length) lines.push(`Liens publics: ${pubLinks.join(", ")}`);
+    const taggedUrls = Array.isArray(item.taggedUrls)
+      ? item.taggedUrls.map((entry) => `${entry.label || "Link"}: ${entry.url || ""}`).filter(Boolean)
+      : [];
+    if (taggedUrls.length) lines.push(`Tagged URLs: ${taggedUrls.join(", ")}`);
   }
 
   if (specs) lines.push(`Specs: ${specs}`);
@@ -157,9 +162,12 @@ RÈGLES:
 
 7. Tu peux continuer la conversation après avoir émis le bloc (poser des questions pour raffiner).
 8. Si l'utilisateur demande de générer un post après la saisie, réponds en mode créatif avec le ton décrit ici: ${VOICE_GUIDE}
-9. Réponds toujours en français sauf si l'utilisateur écrit en anglais.
+9. Réponds dans la langue de l'utilisateur (français, anglais, espagnol, etc.) pour la conversation.
 10. Sois bref et direct. Pas de longues explications.
-11. Pour chaque fiche, assigne la visibilite de chaque champ dans un objet "visibility". Utilise les defauts du schema sauf si le contexte indique autrement (ex: email partage publiquement -> email: "public"). N'inclus dans visibility que les champs dont la valeur differe du defaut.`;
+11. Pour chaque fiche, assigne la visibilite de chaque champ dans un objet "visibility". Utilise les defauts du schema sauf si le contexte indique autrement (ex: email partage publiquement -> email: "public"). N'inclus dans visibility que les champs dont la valeur differe du defaut.
+12. IMPORTANT: Tu peux converser dans la langue de l'utilisateur, MAIS toutes les valeurs structurées du bloc [EXTRACTED] doivent être en ANGLAIS canonique (labels, tags, booking notes générées, champs normalisés).
+13. Si une traduction est ambiguë, pose une question de clarification avant d'émettre [EXTRACTED].
+14. Scheduling policy: do NOT be overly strict. Overlaps are allowed if user accepts them. If you detect a likely overlap, warn briefly and propose an earlier alternative slot when possible.`;
 }
 
 module.exports = async function handler(req, res) {

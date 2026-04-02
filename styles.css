@@ -1179,6 +1179,98 @@ textarea:focus {
 
 .ai-overlay__copy-bubble:hover { background: rgba(200, 134, 10, 0.28); }
 
+.tag-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.tag-badge {
+  border: 1px solid rgba(200, 145, 26, 0.45);
+  background: rgba(200, 145, 26, 0.14);
+  color: #f4d9a2;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.tagged-url-list {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.tagged-url-row {
+  display: grid;
+  gap: 0.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  border-radius: 9px;
+  padding: 0.42rem 0.5rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tagged-url__label {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.tagged-url__url {
+  font-size: 0.72rem;
+  opacity: 0.88;
+  overflow-wrap: anywhere;
+}
+
+.tagged-url__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.tagged-url__tag {
+  font-size: 0.68rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 0.05rem 0.38rem;
+  opacity: 0.9;
+}
+
+.collab-unlocked-tools {
+  margin-top: 0.8rem;
+}
+
+.collab-inline-form {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.7rem;
+}
+
+.collab-inline-form label {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.collab-inline-form input,
+.collab-inline-form select {
+  width: 100%;
+}
+
+.inline-save-btn {
+  justify-self: start;
+  border: 1px solid #c8860a;
+  background: rgba(200, 134, 10, 0.16);
+  color: #c8860a;
+  border-radius: 8px;
+  padding: 0.35rem 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* Loading bubble */
 .ai-overlay__loading {
   align-self: flex-start;

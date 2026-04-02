@@ -1,4 +1,8 @@
-const { listCollaborators } = require("../../lib/collaborators-store");
+const {
+  listCollaborators,
+  updateCollaboratorBooking,
+  addCollaboratorTaggedUrl
+} = require("../../lib/collaborators-store");
 const { verifyToken } = require("../../lib/collab-token");
 
 function parseCookies(header) {
@@ -12,7 +16,7 @@ function parseCookies(header) {
 }
 
 module.exports = async function handler(req, res) {
-  if (req.method !== "GET") {
+  if (req.method !== "GET" && req.method !== "POST") {
     res.status(405).json({ ok: false, error: "Method not allowed" });
     return;
   }
@@ -30,6 +34,42 @@ module.exports = async function handler(req, res) {
   if (!tokenCollabId || tokenCollabId !== id) {
     res.status(401).json({ ok: false, error: "Unauthorized" });
     return;
+  }
+
+  const rawOp = Array.isArray(req.query.op) ? req.query.op[0] : req.query.op;
+  const op = String(rawOp || "").trim();
+
+  if (req.method === "POST") {
+    try {
+      if (op === "update-booking") {
+        const result = await updateCollaboratorBooking(id, req.body?.booking || {});
+        res.setHeader("Cache-Control", "no-store");
+        res.status(200).json({ ok: true, collaborator: result.collaborator, warning: result.warning || null });
+        return;
+      }
+
+      if (op === "add-tagged-url") {
+        const collaborator = await addCollaboratorTaggedUrl(id, req.body?.taggedUrl || req.body || {});
+        res.setHeader("Cache-Control", "no-store");
+        res.status(200).json({ ok: true, collaborator });
+        return;
+      }
+
+      res.status(400).json({ ok: false, error: "Invalid op" });
+      return;
+    } catch (err) {
+      const msg = String(err?.message || "Server error");
+      if (msg === "Collaborator not found") {
+        res.status(404).json({ ok: false, error: msg });
+        return;
+      }
+      if (msg.includes("Invalid")) {
+        res.status(400).json({ ok: false, error: msg });
+        return;
+      }
+      res.status(500).json({ ok: false, error: "Server error" });
+      return;
+    }
   }
 
   try {
