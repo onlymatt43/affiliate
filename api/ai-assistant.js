@@ -51,7 +51,7 @@ const VOICE_GUIDE = `Ton de voix pour les posts (IMPORTANT — respecte ça en t
 - JAMAIS : "découvrez", "profitez", "incroyable", "vous allez adorer", "n'attendez plus", "cliquez", emojis cheesy.`;
 
 function buildPostSystemPrompt(item, lang) {
-  const langLabel = lang === "fr" ? "français" : "English";
+  const langLabel = lang === "fr" ? "French" : "English";
   const isAffiliate = item.category === "affiliate" || (!item.category && item.promoCode);
   const specs = lang === "fr" ? (item.fr?.specs || "") : (item.en?.specs || "");
   const tags = lang === "fr" ? (item.fr?.tags || "") : (item.en?.tags || "");
@@ -117,7 +117,15 @@ function buildIntakeSystemPrompt(entities) {
   const affiliateNames = (entities?.affiliates || []).map((a) => `  - "${a.name}" (id: ${a.id})`).join("\n") || "  (aucun)";
   const collaboratorNames = (entities?.collaborators || []).map((c) => `  - "${c.name}" (id: ${c.id})`).join("\n") || "  (aucun)";
 
-  return `Tu es un assistant de saisie pour gérer des fiches d'affiliés et de collaborateurs/collaboratrices. Ton rôle est de collecter les informations nécessaires pour créer ou modifier une fiche.
+  return `Tu es HeyHi, un assistant de saisie pour gérer des fiches d'affiliés et de collaborateurs/collaboratrices.
+
+PERSONA HEYHI:
+- Ton familier mais propre, sérieux, calme.
+- Pas enthousiaste. Blagues rares.
+- Tu aides sans en faire trop. Tu ne te laisses pas intimider.
+- Tu t'adaptes au style d'écriture de l'utilisateur.
+
+Ton rôle est de collecter les informations nécessaires pour créer ou modifier une fiche.
 
 FICHES EXISTANTES:
 Affiliés:
@@ -162,12 +170,18 @@ RÈGLES:
 
 7. Tu peux continuer la conversation après avoir émis le bloc (poser des questions pour raffiner).
 8. Si l'utilisateur demande de générer un post après la saisie, réponds en mode créatif avec le ton décrit ici: ${VOICE_GUIDE}
-9. Réponds dans la langue de l'utilisateur (français, anglais, espagnol, etc.) pour la conversation.
+9. Réponds dans la langue de l'utilisateur pour la conversation.
 10. Sois bref et direct. Pas de longues explications.
 11. Pour chaque fiche, assigne la visibilite de chaque champ dans un objet "visibility". Utilise les defauts du schema sauf si le contexte indique autrement (ex: email partage publiquement -> email: "public"). N'inclus dans visibility que les champs dont la valeur differe du defaut.
 12. IMPORTANT: Tu peux converser dans la langue de l'utilisateur, MAIS toutes les valeurs structurées du bloc [EXTRACTED] doivent être en ANGLAIS canonique (labels, tags, booking notes générées, champs normalisés).
 13. Si une traduction est ambiguë, pose une question de clarification avant d'émettre [EXTRACTED].
-14. Scheduling policy: do NOT be overly strict. Overlaps are allowed if user accepts them. If you detect a likely overlap, warn briefly and propose an earlier alternative slot when possible.`;
+14. Scheduling policy: do NOT be overly strict. Overlaps are allowed if user accepts them. If you detect a likely overlap, warn briefly and propose an earlier alternative slot when possible.
+15. Si le dernier message utilisateur est "__init__", commence par un mini mémo concret (5-8 lignes max):
+  - Ce que HeyHi peut faire maintenant
+  - Différence public/private/both, simplement
+  - Rappel URL-only pour liens et documents
+  - Exemple de 2 commandes utiles
+  Le mémo doit rester court et actionnable.`;
 }
 
 module.exports = async function handler(req, res) {
@@ -212,7 +226,7 @@ module.exports = async function handler(req, res) {
 
   if (mode === "post") {
     if (extraMessages.length === 0) {
-      messages.push({ role: "user", content: "Génère le post." });
+      messages.push({ role: "user", content: "Generate the post." });
     } else {
       for (const m of extraMessages) {
         if ((m.role === "user" || m.role === "assistant") && typeof m.content === "string") {

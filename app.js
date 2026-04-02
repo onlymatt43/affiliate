@@ -1440,7 +1440,7 @@ function privateCardMarkup(item) {
         ${cardActions}
         <button type="button" data-action="edit">Modifier</button>
         <button type="button" data-action="duplicate">Dupliquer bloc</button>
-        <button type="button" data-action="ai-assistant" class="accent-ai">✦ Assistant IA</button>
+        <button type="button" data-action="ai-assistant" class="accent-ai">✦ HeyHi</button>
         <button type="button" data-action="copy-all" class="accent">Copier tout</button>
         <span class="copy-feedback" aria-live="polite"></span>
       </div>
@@ -2702,7 +2702,7 @@ function showAIAssistantOverlay(item, mode) {
     overlay.innerHTML = `
       <div class="ai-overlay__inner">
         <div class="ai-overlay__header">
-          <h3 class="ai-overlay__title">✦ Assistant IA</h3>
+          <h3 class="ai-overlay__title">✦ HeyHi</h3>
           <div class="ai-overlay__header-right">
             ${mode === "post" ? `
             <div class="ai-overlay__langs">
