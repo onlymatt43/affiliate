@@ -9,16 +9,22 @@ const {
 const { isAuthenticated } = require("../lib/auth");
 const { enforceRateLimit, enforcePayloadLimit } = require("../lib/request-guards");
 
-const PUBLIC_FIELDS = new Set(["id", "name", "publicLink", "publicLinks", "logos", "contact", "platform"]);
+const PUBLIC_FIELDS = new Set(["id", "name", "primaryUrl", "publicLinks", "logos", "contact", "platform"]);
 
 function toPublicShape(collab) {
+  const vis = collab.visibility || {};
   const out = {};
   for (const key of PUBLIC_FIELDS) {
+    const v = vis[key];
+    if (v === "private") continue;
     if (key in collab) out[key] = collab[key];
   }
   // Expose only dateLabel + timeLabel for booking badge / sort — not location or note
-  const b = collab.booking || {};
-  out.booking = { dateLabel: b.dateLabel || "", timeLabel: b.timeLabel || "" };
+  const bVis = vis.booking || "both";
+  if (bVis !== "private") {
+    const b = collab.booking || {};
+    out.booking = { dateLabel: b.dateLabel || "", timeLabel: b.timeLabel || "" };
+  }
   return out;
 }
 

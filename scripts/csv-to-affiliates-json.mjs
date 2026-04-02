@@ -135,7 +135,7 @@ function toAffiliate(record, index) {
     niche: toText(record.niche) || "business",
     format: toText(record.format) || "short-video",
     tone: toText(record.tone) || "authority",
-    promoUrl: isValidHttpUrl(toText(record.promoUrl)) ? toText(record.promoUrl) : "",
+    primaryUrl: isValidHttpUrl(toText(record.primaryUrl || record.promoUrl)) ? toText(record.primaryUrl || record.promoUrl) : "",
     promoCode: toText(record.promoCode),
     socialUrl: isValidHttpUrl(toText(record.socialUrl)) ? toText(record.socialUrl) : "",
     mentions: toText(record.mentions),

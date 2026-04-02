@@ -53,7 +53,7 @@ module.exports = async function handler(req, res) {
   const name = toText(collab.name);
   const booking = bookingSummary(collab.booking);
   const loc = toText(collab.booking && collab.booking.location);
-  const avatar = socialAvatarUrl(collab.publicLink);
+  const avatar = socialAvatarUrl(collab.primaryUrl || collab.publicLink);
   const appUrl = "https://affiliates.onlymatt.ca/?share=" + encodeURIComponent(id);
   const title = booking ? "RV \u00b7 " + name + " \u2014 " + booking : name;
   const desc = loc || (booking ? booking : "Voir le profil de collaboration");

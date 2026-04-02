@@ -27,7 +27,7 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const isAffiliate = !item.publicLink && item.promoUrl;
+  const isAffiliate = item.category === "affiliate" || (!item.category && item.promoCode);
   const langLabel = lang === "fr" ? "français" : "English";
 
   const voiceGuide = `Ton de voix (IMPORTANT — respecte ça en tout temps):
@@ -49,7 +49,7 @@ Tu es un créateur de contenu OnlyFans. Écris un post promotionnel en ${langLab
 
 Marque: ${item.name}
 Plateforme: ${item.platform}
-URL promo: ${item.promoUrl}${item.promoCode ? `\nCode promo: ${item.promoCode}` : ""}${item.mentions ? `\nMentions: ${item.mentions}` : ""}${item.postRequirements ? `\nExigences du post: ${item.postRequirements}` : ""}${item.specificities ? `\nSpécificités: ${item.specificities}` : ""}${specs ? `\nSpecs: ${specs}` : ""}${tags ? `\nHashtags à inclure: ${tags}` : ""}
+URL promo: ${item.primaryUrl || item.promoUrl}${item.promoCode ? `\nCode promo: ${item.promoCode}` : ""}${item.mentions ? `\nMentions: ${item.mentions}` : ""}${item.postRequirements ? `\nExigences du post: ${item.postRequirements}` : ""}${item.specificities ? `\nSpécificités: ${item.specificities}` : ""}${specs ? `\nSpecs: ${specs}` : ""}${tags ? `\nHashtags à inclure: ${tags}` : ""}
 
 Format: ${item.format}. Maximum 300 mots.`;
   } else {
@@ -61,7 +61,7 @@ Tu es un créateur de contenu OnlyFans. Écris un post de collaboration en ${lan
 
 Collaborateur: ${item.name}
 Plateforme: ${item.platform}
-Lien: ${item.publicLink}${item.contact ? `\nContact: ${item.contact}` : ""}${item.rates ? `\nRates: ${item.rates}` : ""}${specs ? `\nSpecs de collaboration: ${specs}` : ""}${tags ? `\nHashtags à inclure: ${tags}` : ""}
+Lien: ${item.primaryUrl || item.publicLink}${item.contact ? `\nContact: ${item.contact}` : ""}${item.rates ? `\nRates: ${item.rates}` : ""}${specs ? `\nSpecs de collaboration: ${specs}` : ""}${tags ? `\nHashtags à inclure: ${tags}` : ""}
 
 Format: ${item.format || "short-video"}. Maximum 300 mots.`;
   }

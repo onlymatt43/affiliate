@@ -4,7 +4,7 @@ const { enforceRateLimit, enforcePayloadLimit } = require("../lib/request-guards
 // Affiliate fields reference for the intake system prompt
 const AFFILIATE_SCHEMA = `Fiche AFFILIÉ (type: "affiliate"):
   name          — Nom de la marque (requis)
-  promoUrl      — URL promo (requis, https://...)
+  primaryUrl    — URL principal / promo (requis, https://...)
   promoCode     — Code promo/fan (optionnel)
   socialUrl     — URL profil social de la marque (optionnel)
   mentions      — Handles à mentionner dans les posts (ex: @brand)
@@ -16,11 +16,13 @@ const AFFILIATE_SCHEMA = `Fiche AFFILIÉ (type: "affiliate"):
   tone          — "authority" | "story" | "motivation"
   logos         — URLs de logos (jusqu'à 3, séparés par des virgules ou nouvelles lignes)
   mediaImages   — URLs d'images (une par ligne)
-  mediaVideos   — URLs de vidéos (une par ligne)`;
+  mediaVideos   — URLs de vidéos (une par ligne)
+  visibility    — Objet optionnel de visibilite par champ. Valeurs: "public", "private", "both".
+                  Defauts affilie: name=both, primaryUrl=both, promoCode=public, socialUrl=private, mentions=private, postRequirements=private, specificities=private, logos=both, mediaImages=both, mediaVideos=both`;
 
 const COLLABORATOR_SCHEMA = `Fiche COLLABORATEUR (type: "collaborator"):
   name          — Nom du/de la collaborateur/trice (requis)
-  publicLink    — Lien principal public (requis, https://...)
+  primaryUrl    — Lien principal public (requis, https://...)
   contact       — @handle ou email de contact
   email         — Email privé (optionnel)
   rates         — Tarifs / conditions / notes financières
@@ -35,7 +37,9 @@ const COLLABORATOR_SCHEMA = `Fiche COLLABORATEUR (type: "collaborator"):
   tone          — "authority" | "story" | "motivation"
   logos         — URLs de logos (jusqu'à 3)
   mediaImages   — URLs d'images (une par ligne)
-  mediaVideos   — URLs de vidéos (une par ligne)`;
+  mediaVideos   — URLs de vidéos (une par ligne)
+  visibility    — Objet optionnel de visibilite par champ. Valeurs: "public", "private", "both".
+                  Defauts collab: name=both, primaryUrl=both, publicLinks=public, privateLinks=private, contact=public, email=private, rates=private, booking=both, sourceNotes=private, logos=both, mediaImages=both, mediaVideos=both`;
 
 const VOICE_GUIDE = `Ton de voix pour les posts (IMPORTANT — respecte ça en tout temps):
 - Court. Très court. 3-5 phrases max.
@@ -47,7 +51,7 @@ const VOICE_GUIDE = `Ton de voix pour les posts (IMPORTANT — respecte ça en t
 
 function buildPostSystemPrompt(item, lang) {
   const langLabel = lang === "fr" ? "français" : "English";
-  const isAffiliate = !item.publicLink && item.promoUrl;
+  const isAffiliate = item.category === "affiliate" || (!item.category && item.promoCode);
   const specs = lang === "fr" ? (item.fr?.specs || "") : (item.en?.specs || "");
   const tags = lang === "fr" ? (item.fr?.tags || "") : (item.en?.tags || "");
   const caption = lang === "fr" ? (item.fr?.caption || "") : (item.en?.caption || "");
@@ -62,14 +66,14 @@ function buildPostSystemPrompt(item, lang) {
   if (item.tone) lines.push(`Ton: ${item.tone}`);
 
   if (isAffiliate) {
-    if (item.promoUrl) lines.push(`URL promo: ${item.promoUrl}`);
+    if (item.primaryUrl) lines.push(`URL promo: ${item.primaryUrl}`);
     if (item.promoCode) lines.push(`Code promo: ${item.promoCode}`);
     if (item.socialUrl) lines.push(`Profil social: ${item.socialUrl}`);
     if (item.mentions) lines.push(`Mentions: ${item.mentions}`);
     if (item.postRequirements) lines.push(`Exigences du post: ${item.postRequirements}`);
     if (item.specificities) lines.push(`Spécificités: ${item.specificities}`);
   } else {
-    if (item.publicLink) lines.push(`Lien principal: ${item.publicLink}`);
+    if (item.primaryUrl) lines.push(`Lien principal: ${item.primaryUrl}`);
     if (item.contact) lines.push(`Contact: ${item.contact}`);
     if (item.email) lines.push(`Email: ${item.email}`);
     if (item.rates) lines.push(`Tarifs: ${item.rates}`);
@@ -126,7 +130,7 @@ RÈGLES:
 1. Pose des questions progressivement — pas tout en même temps. Commence par identifier le type (affilié ou collaborateur) et le nom.
 2. Si l'utilisateur colle du texte brut (DM, email, message), extrais automatiquement tous les champs possibles sans poser de questions inutiles.
 3. Si l'utilisateur mentionne un nom qui correspond à une fiche existante, utilise son id comme editId (modification) plutôt que création.
-4. Le champ minimum pour créer une fiche: name + promoUrl (affilié) OU name + publicLink (collaborateur).
+4. Le champ minimum pour créer une fiche: name + primaryUrl (affilié ou collaborateur).
 5. Quand tu as les champs minimum, émets le bloc d'extraction dans ton message (même si tu poses encore des questions complémentaires):
 
 [EXTRACTED]
@@ -135,7 +139,7 @@ RÈGLES:
   "editId": null | "id-existant",
   "fields": {
     "name": "...",
-    "promoUrl": "...",
+    "primaryUrl": "...",
     ... (tous les champs extraits disponibles)
   }
 }
@@ -154,7 +158,8 @@ RÈGLES:
 7. Tu peux continuer la conversation après avoir émis le bloc (poser des questions pour raffiner).
 8. Si l'utilisateur demande de générer un post après la saisie, réponds en mode créatif avec le ton décrit ici: ${VOICE_GUIDE}
 9. Réponds toujours en français sauf si l'utilisateur écrit en anglais.
-10. Sois bref et direct. Pas de longues explications.`;
+10. Sois bref et direct. Pas de longues explications.
+11. Pour chaque fiche, assigne la visibilite de chaque champ dans un objet "visibility". Utilise les defauts du schema sauf si le contexte indique autrement (ex: email partage publiquement -> email: "public"). N'inclus dans visibility que les champs dont la valeur differe du defaut.`;
 }
 
 module.exports = async function handler(req, res) {

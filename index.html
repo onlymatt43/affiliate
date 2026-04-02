@@ -133,9 +133,9 @@
               <input id="fName" name="name" type="text" />
             </label>
 
-            <label class="form-affiliate-only">
-              URL promo
-              <input id="fPromoUrl" name="promoUrl" type="text" placeholder="https://..." />
+            <label class="quick-add-field">
+              URL principal
+              <input id="fPrimaryUrl" name="primaryUrl" type="text" placeholder="https://..." />
             </label>
 
             <label class="form-affiliate-only">
@@ -146,11 +146,6 @@
             <label class="form-affiliate-only">
               URL social (optionnel)
               <input id="fSocialUrl" name="socialUrl" type="text" placeholder="https://..." />
-            </label>
-
-            <label class="form-collaborator-only is-hidden quick-add-field">
-              Lien principal (public)
-              <input id="fPublicLink" name="publicLink" type="text" placeholder="https://..." />
             </label>
 
             <label class="form-collaborator-only is-hidden">
@@ -270,7 +265,7 @@
       Affiliate: {{name}}
 Platform: {{platform}}
 Niche: {{niche}}
-Promo URL: {{promoUrl}}
+Promo URL: {{primaryUrl}}
 Promo code: {{promoCode}}
 Mentions: {{mentions}}
 Logos: {{logos}}
@@ -292,7 +287,7 @@ Caption:
       Collaborator: {{name}}
 Platform: {{platform}}
 Niche: {{niche}}
-Public link: {{publicLink}}
+Public link: {{primaryUrl}}
 Private links: {{privateLinks}}
 Contact: {{contact}}
 Rates: {{rates}}

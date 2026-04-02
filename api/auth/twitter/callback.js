@@ -100,13 +100,14 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  // Verify: does the logged-in Twitter handle match this collaborator's publicLink handle?
+  // Verify: does the logged-in Twitter handle match this collaborator's primaryUrl handle?
   let matched = false;
   try {
     const { collaborators } = await listCollaborators();
     const collab = collaborators.find((c) => c.id === collabId);
-    if (collab && collab.publicLink) {
-      const expected = extractHandle(collab.publicLink);
+    const collabUrl = collab && (collab.primaryUrl || collab.publicLink);
+    if (collabUrl) {
+      const expected = extractHandle(collabUrl);
       matched = expected.length > 0 && expected === twitterUsername;
     }
   } catch (_) {}
