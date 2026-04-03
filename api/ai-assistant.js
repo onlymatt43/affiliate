@@ -51,6 +51,83 @@ const VOICE_GUIDE = `Ton de voix pour les posts (IMPORTANT — respecte ça en t
 - Langage simple, cru si nécessaire. Fautes naturelles. Phrases courtes. Parfois juste un mot.
 - JAMAIS : "découvrez", "profitez", "incroyable", "vous allez adorer", "n'attendez plus", "cliquez", emojis cheesy.`;
 
+function collectUrlsFromText(value) {
+  const text = String(value || "");
+  const matches = text.match(/https?:\/\/[^\s<>"]+/gi) || [];
+  return matches.map((url) => String(url).trim().replace(/[),.;!?]+$/, ""));
+}
+
+function collectEvidenceUrls(extraMessages, activeItem) {
+  const set = new Set();
+
+  (Array.isArray(extraMessages) ? extraMessages : []).forEach((m) => {
+    if (m?.role !== "user") return;
+    collectUrlsFromText(m?.content).forEach((url) => set.add(url));
+  });
+
+  const item = activeItem && typeof activeItem === "object" ? activeItem : {};
+  const candidateSingles = [item.primaryUrl, item.socialUrl, item.publicLink, item.mainLink, item.link];
+  candidateSingles.forEach((url) => {
+    if (typeof url === "string" && /^https?:\/\//i.test(url)) set.add(url.trim());
+  });
+
+  [item.publicLinks, item.privateLinks, item.logos, item.mediaImages, item.mediaVideos].forEach((arr) => {
+    if (!Array.isArray(arr)) return;
+    arr.forEach((entry) => {
+      if (typeof entry === "string" && /^https?:\/\//i.test(entry)) set.add(entry.trim());
+      if (entry && typeof entry === "object" && typeof entry.url === "string" && /^https?:\/\//i.test(entry.url)) {
+        set.add(entry.url.trim());
+      }
+    });
+  });
+
+  if (Array.isArray(item.taggedUrls)) {
+    item.taggedUrls.forEach((entry) => {
+      if (entry && typeof entry === "object" && typeof entry.url === "string" && /^https?:\/\//i.test(entry.url)) {
+        set.add(entry.url.trim());
+      }
+    });
+  }
+
+  return set;
+}
+
+function sanitizeExtractedByEvidence(extracted, evidenceUrls) {
+  if (!extracted || typeof extracted !== "object") return extracted;
+  if (!(evidenceUrls instanceof Set) || evidenceUrls.size === 0) return extracted;
+
+  const fields = extracted.fields && typeof extracted.fields === "object" ? extracted.fields : null;
+  if (!fields) return extracted;
+
+  const safe = { ...fields };
+  const has = (url) => typeof url === "string" && evidenceUrls.has(url.trim());
+
+  ["primaryUrl", "socialUrl", "url", "publicLink", "mainLink", "link"].forEach((key) => {
+    if (safe[key] != null && !has(safe[key])) delete safe[key];
+  });
+
+  const filterLinkArray = (value) => {
+    if (!Array.isArray(value)) return value;
+    return value
+      .map((entry) => {
+        if (typeof entry === "string") return has(entry) ? { label: "Link", url: entry.trim() } : null;
+        if (!entry || typeof entry !== "object") return null;
+        const url = typeof entry.url === "string" ? entry.url.trim() : "";
+        if (!has(url)) return null;
+        return { ...entry, url };
+      })
+      .filter(Boolean);
+  };
+
+  ["publicLinks", "privateLinks", "taggedUrls", "logos", "mediaImages", "mediaVideos"].forEach((key) => {
+    if (safe[key] != null) {
+      safe[key] = filterLinkArray(safe[key]);
+    }
+  });
+
+  return { ...extracted, fields: safe };
+}
+
 function buildPostSystemPrompt(item, lang) {
   const langLabel = lang === "fr" ? "French" : "English";
   const isAffiliate = item.category === "affiliate" || (!item.category && item.promoCode);
@@ -218,7 +295,9 @@ RÈGLES:
   - Différence public/private/both, simplement
   - Rappel URL-only pour liens et documents
   - Exemple de 2 commandes utiles
-  Le mémo doit rester court et actionnable.`;
+  Le mémo doit rester court et actionnable.
+16. N'invente JAMAIS de données (noms, liens, handles, booking, emails). Si une donnée n'est pas explicitement fournie dans la conversation ou la carte active, pose une question de clarification au lieu de remplir.
+17. Pour les URLs: n'utilise que les URLs explicitement écrites par l'utilisateur (ou déjà présentes dans la carte active).`;
 }
 
 module.exports = async function handler(req, res) {
@@ -344,6 +423,9 @@ module.exports = async function handler(req, res) {
           extracted = null;
         }
       }
+
+      const evidenceUrls = collectEvidenceUrls(extraMessages, item);
+      extracted = sanitizeExtractedByEvidence(extracted, evidenceUrls);
 
       const deleteMatch = rawContent.match(/\[DELETE\]([\s\S]*?)\[\/DELETE\]/);
       if (deleteMatch) {

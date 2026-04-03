@@ -88,20 +88,15 @@ function randomPick(arr) {
 }
 
 function assignCardArchetypes(items) {
-  const thresholds = [50, 70, 90, 100]; // default 50%, featured 20%, small 20%, editorial 10%
-  const types = ["default", "featured", "small", "editorial"];
-  return items.map((item) => {
-    const roll = Math.random() * 100;
-    const archetype = types[thresholds.findIndex((t) => roll < t)];
-    return { item, archetype };
-  });
+  const pattern = ["square", "vert", "horz", "square", "vert", "square", "horz", "square"];
+  return items.map((item, index) => ({ item, archetype: pattern[index % pattern.length] }));
 }
 
 const DYNAMIC_THEMES = [
   {
-    body: "radial-gradient(circle at 12% 16%, #ffd8bf 0%, transparent 32%), radial-gradient(circle at 84% 18%, #ffefb0 0%, transparent 28%), linear-gradient(180deg, #fff7ef 0%, #ffe4d2 100%)",
-    orbA: "#ff7e57",
-    orbB: "#2ba191"
+    body: "radial-gradient(circle at 8% 12%, rgba(255, 122, 0, 0.24) 0%, transparent 28%), radial-gradient(circle at 86% 14%, rgba(255, 214, 10, 0.32) 0%, transparent 26%), repeating-linear-gradient(135deg, rgba(20, 20, 20, 0.05) 0 8px, rgba(255, 255, 255, 0.05) 8px 16px), linear-gradient(180deg, #ffd000 0%, #ffbb00 100%)",
+    orbA: "#ff6a00",
+    orbB: "#151b2d"
   },
   {
     body: "radial-gradient(circle at 20% 10%, #d7f7e9 0%, transparent 34%), radial-gradient(circle at 82% 24%, #ffe2b8 0%, transparent 30%), linear-gradient(180deg, #f4fff8 0%, #e7f6ff 100%)",
@@ -121,8 +116,7 @@ const DYNAMIC_THEMES = [
 ];
 
 function applyDynamicTheme() {
-  const theme = randomPick(DYNAMIC_THEMES);
-  if (!theme) return;
+  const theme = DYNAMIC_THEMES[0];
 
   document.body.style.background = theme.body;
   const orbA = document.querySelector(".orb-a");
@@ -141,58 +135,20 @@ function shuffleItems(items) {
 }
 
 function applyCardChaosLayout() {
-  const isNarrow = window.matchMedia("(max-width: 720px)").matches;
   const cards = getAllCards();
-  cards.forEach((card, index) => {
-    card.classList.toggle("card-chaos", !isNarrow);
-    card.classList.remove("card-chaos--wide", "card-chaos--tall");
-
-    if (isNarrow) {
-      card.style.setProperty("--chaos-delay", "0ms");
-      card.style.setProperty("--chaos-rot", "0deg");
-      return;
-    }
-
-    const roll = Math.random();
-    if (roll > 0.84) {
-      card.classList.add("card-chaos--wide");
-    } else if (roll > 0.68) {
-      card.classList.add("card-chaos--tall");
-    }
-
-    card.style.setProperty("--chaos-delay", `${Math.round(randomBetween(0, 450)) + index * 12}ms`);
-    card.style.setProperty("--chaos-rot", `${randomBetween(-1.4, 1.4).toFixed(2)}deg`);
+  cards.forEach((card) => {
+    card.classList.remove("card-chaos", "card-chaos--wide", "card-chaos--tall");
+    card.style.removeProperty("--chaos-delay");
+    card.style.removeProperty("--chaos-rot");
   });
 }
 
 function injectDarkBackground() {
   document.body.classList.add("dark-collab-mode");
-  if (document.querySelector(".dark-orb")) return;
-  const orbDefs = [
-    { color: "#c8911a", minO: 0.02, maxO: 0.06 },
-    { color: "#8b3a0f", minO: 0.025, maxO: 0.065 },
-    { color: "#c8911a", minO: 0.015, maxO: 0.04 },
-    { color: "#ffffff", minO: 0.01, maxO: 0.025 },
-    { color: "#8b3a0f", minO: 0.02, maxO: 0.05 },
-    { color: "#c8911a", minO: 0.015, maxO: 0.035 }
-  ];
-  const count = Math.floor(randomBetween(4, 7));
-  for (let i = 0; i < count; i++) {
-    const orb = document.createElement("div");
-    orb.classList.add("dark-orb");
-    const def = orbDefs[i % orbDefs.length];
-    const size = Math.round(randomBetween(180, 580));
-    const top = Math.round(randomBetween(-8, 95));
-    const left = Math.round(randomBetween(-8, 98));
-    const opacity = randomBetween(def.minO, def.maxO).toFixed(3);
-    orb.style.cssText = `width:${size}px;height:${size}px;top:${top}%;left:${left}%;background:${def.color};opacity:${opacity};`;
-    document.body.appendChild(orb);
-  }
 }
 
 function removeDarkBackground() {
   document.body.classList.remove("dark-collab-mode");
-  document.querySelectorAll(".dark-orb").forEach((el) => el.remove());
 }
 // --- end arty dark mode helpers ---
 
@@ -305,6 +261,13 @@ function normalizeCollaboratorCategory(value) {
   const normalized = toText(value).toLowerCase();
   if (!normalized || !VALID_CATEGORIES.includes(normalized)) return "collaborator";
   return normalized;
+}
+
+function entityTypeLabel(value) {
+  const normalized = toText(value).toLowerCase();
+  if (normalized === "collaborator") return "collaborators";
+  if (normalized === "event") return "event";
+  return "affiliate";
 }
 
 function isValidHttpUrl(value) {
@@ -1499,53 +1462,41 @@ function mergeAllItems() {
 function publicCardMarkup(item, archetype = "default") {
   const isNarrowViewport = window.matchMedia("(max-width: 720px)").matches;
   const isCollabType = item.category === "collaborator" || item.category === "event";
-  const platformLabel = PLATFORM_LABELS[item.platform] || item.platform;
+  const itemTypeLabel = entityTypeLabel(item.category || (isCollabType ? "collaborator" : "affiliate"));
   const borderOpacity = randomBetween(0.14, 0.38).toFixed(2);
+  const titleScale = isNarrowViewport ? randomBetween(0.96, 1.06) : randomBetween(0.9, 1.24);
+  const titleShiftX = isNarrowViewport ? randomBetween(-2, 2) : randomBetween(-14, 18);
+  const titleShiftY = isNarrowViewport ? randomBetween(-2, 2) : randomBetween(-10, 10);
+  const urlScale = isNarrowViewport ? randomBetween(0.96, 1.04) : randomBetween(0.86, 1.18);
+  const urlShiftX = isNarrowViewport ? randomBetween(-1, 1) : randomBetween(-10, 12);
+  const wildClass = !isNarrowViewport && Math.random() > 0.5 ? " card-typo-wild" : "";
 
   let articleStyle, articleClasses, nameSize;
+  const sizeClass = archetype === "vert" || archetype === "horz" ? `card-template--${archetype}` : "card-template--square";
   if (isCollabType) {
-    const nameSizeBase = isNarrowViewport
-      ? ({ default: 0.98, featured: 1.16, small: 0.9, editorial: 1.06 }[archetype] || 0.98)
-      : ({ default: 1.05, featured: 2.1, small: 0.88, editorial: 1.75 }[archetype] || 1.05);
-    nameSize = (nameSizeBase + randomBetween(isNarrowViewport ? -0.06 : -0.15, isNarrowViewport ? 0.06 : 0.15)).toFixed(2);
-    const aspectRatioMap = isNarrowViewport
-      ? { default: [0.92, 1.1], featured: [0.84, 1.02], small: [1.02, 1.2], editorial: [0.88, 1.06] }
-      : { default: [0.88, 1.12], featured: [0.60, 0.82], small: [1.28, 1.68], editorial: [0.72, 0.96] };
-    const [arMin, arMax] = aspectRatioMap[archetype] || [0.88, 1.12];
-    const aspectRatio = randomBetween(arMin, arMax).toFixed(3);
-    articleStyle = `border: 1px solid rgba(200, 145, 26, ${borderOpacity}); aspect-ratio: ${aspectRatio};`;
-    articleClasses = `affiliate-card collaborator-card public-card card--${archetype}`;
+    const nameSizeBase = isNarrowViewport ? 1.02 : 1.16;
+    nameSize = nameSizeBase.toFixed(2);
+    articleStyle = `border: 1px solid rgba(200, 145, 26, ${borderOpacity}); --title-scale:${titleScale.toFixed(2)}; --title-shift-x:${titleShiftX.toFixed(1)}px; --title-shift-y:${titleShiftY.toFixed(1)}px; --url-scale:${urlScale.toFixed(2)}; --url-shift-x:${urlShiftX.toFixed(1)}px;`;
+    articleClasses = `affiliate-card collaborator-card public-card ${sizeClass}${wildClass}`;
   } else {
-    const nameSizeBase = isNarrowViewport
-      ? ({ default: 1.04, featured: 1.22, small: 0.94, editorial: 1.08 }[archetype] || 1.04)
-      : ({ default: 1.24, featured: 1.75, small: 1.0, editorial: 1.5 }[archetype] || 1.24);
-    nameSize = (nameSizeBase + randomBetween(isNarrowViewport ? -0.05 : -0.1, isNarrowViewport ? 0.05 : 0.1)).toFixed(2);
-    const minHeightMap = isNarrowViewport
-      ? { default: [180, 220], featured: [220, 280], small: [150, 190], editorial: [190, 250] }
-      : { default: [200, 280], featured: [320, 420], small: [160, 220], editorial: [250, 340] };
-    const [mhMin, mhMax] = minHeightMap[archetype] || [200, 280];
-    const minHeight = Math.round(randomBetween(mhMin, mhMax));
-    const gridRow = !isNarrowViewport && archetype === "featured" ? "span 2" : "span 1";
-    articleStyle = `border: 1px solid rgba(200, 145, 26, ${borderOpacity}); min-height: ${minHeight}px; grid-row: ${gridRow};`;
-    articleClasses = `affiliate-card public-card card--${archetype}`;
+    const nameSizeBase = isNarrowViewport ? 1.06 : 1.18;
+    nameSize = nameSizeBase.toFixed(2);
+    articleStyle = `border: 1px solid rgba(200, 145, 26, ${borderOpacity}); --title-scale:${titleScale.toFixed(2)}; --title-shift-x:${titleShiftX.toFixed(1)}px; --title-shift-y:${titleShiftY.toFixed(1)}px; --url-scale:${urlScale.toFixed(2)}; --url-shift-x:${urlShiftX.toFixed(1)}px;`;
+    articleClasses = `affiliate-card public-card ${sizeClass}${wildClass}`;
   }
 
-  const fontWeight = randomPick([400, 600, 800]);
-  const letterSpacing = randomBetween(0, isNarrowViewport ? 0.03 : 0.1).toFixed(3);
-  const textTransform = randomPick(["none", "uppercase"]);
-  const nameRotation = !isNarrowViewport && archetype === "editorial" ? randomBetween(-8, 8).toFixed(1) : 0;
+  const fontWeight = 700;
+  const letterSpacing = "0.015";
+  const textTransform = "none";
 
   const nameStyle = [
     `font-size: ${nameSize}rem`,
     `font-weight: ${fontWeight}`,
     `letter-spacing: ${letterSpacing}em`,
-    `text-transform: ${textTransform}`,
-    archetype === "editorial" ? `transform: rotate(${nameRotation}deg); display: inline-block;` : ""
+    `text-transform: ${textTransform}`
   ].filter(Boolean).join("; ");
 
-  const editorialAccent = archetype === "editorial"
-    ? `<span class="card--editorial__accent" aria-hidden="true"></span>`
-    : "";
+  const editorialAccent = "";
   const flippedLabel = "";
 
   const bookingBadgeText = isCollabType && isPublicVisible(item, "booking") ? bookingSummary(item.booking) : "";
@@ -1633,6 +1584,7 @@ function publicCardMarkup(item, archetype = "default") {
         <div class="collab-info">
           ${publicTagsMarkup}
           <h2 style="${nameStyle}">${escapeHtml(item.name)}</h2>
+          <p class="meta">${escapeHtml(itemTypeLabel)}</p>
         </div>
       </div>
       <div class="collab-panel">
@@ -1644,8 +1596,7 @@ function publicCardMarkup(item, archetype = "default") {
 
 function privateCardMarkup(item) {
   const isCollabType = item.category === "collaborator" || item.category === "event";
-  const platformLabel = PLATFORM_LABELS[item.platform] || item.platform;
-  const nicheLabel = NICHE_LABELS[item.niche] || item.niche;
+  const itemTypeLabel = entityTypeLabel(item.category || (isCollabType ? "collaborator" : "affiliate"));
   const hasValidPrimaryUrl = isValidHttpUrl(item.primaryUrl);
   const primaryUrlLabel = hasValidPrimaryUrl
     ? (() => {
@@ -1779,7 +1730,7 @@ function privateCardMarkup(item) {
       <div class="card-head">
         <div>
           <h2>${escapeHtml(item.name)}</h2>
-          <p class="meta">${escapeHtml(platformLabel)} · ${escapeHtml(nicheLabel)}</p>
+          <p class="meta">${escapeHtml(itemTypeLabel)}</p>
         </div>
         <div class="card-head__actions">${socialLink}</div>
       </div>
@@ -1926,7 +1877,7 @@ async function hydrateAllPreviews() {
 }
 
 function renderCards() {
-  const activeItems = shuffleItems(getActiveItems());
+  const activeItems = getActiveItems();
   state.debug.renderedCount = activeItems.length;
 
   const isPublicMode = !state.isUnlocked;
@@ -3108,7 +3059,7 @@ function showAIAssistantOverlay(item, mode) {
     overlay.setAttribute("role", "dialog");
     overlay.setAttribute("aria-modal", "true");
     overlay.innerHTML = `
-      <div class="ai-overlay__inner">
+      <div class="ai-overlay__inner${mode === "intake" ? " ai-overlay__inner--intake" : ""}">
         <div class="ai-overlay__header">
           <h3 class="ai-overlay__title">✦ HeyHi</h3>
           <div class="ai-overlay__header-right">
@@ -3120,7 +3071,23 @@ function showAIAssistantOverlay(item, mode) {
             <button type="button" class="ai-overlay__close" aria-label="Fermer">&times;</button>
           </div>
         </div>
-        <div class="ai-overlay__thread"></div>
+        <div class="ai-overlay__body${mode === "intake" ? " is-intake" : ""}">
+          <div class="ai-overlay__thread"></div>
+          ${mode === "intake" ? `
+          <aside class="ai-overlay__preview-pane">
+            <div class="ai-overlay__preview-head">Live card preview</div>
+            <div class="ai-overlay__preview-grid">
+              <section class="ai-overlay__preview-col">
+                <h4>Public</h4>
+                <div class="ai-overlay__preview" data-preview="public"><div class="ai-overlay__preview-empty">En attente d'extraction...</div></div>
+              </section>
+              <section class="ai-overlay__preview-col">
+                <h4>Private</h4>
+                <div class="ai-overlay__preview" data-preview="private"><div class="ai-overlay__preview-empty">En attente d'extraction...</div></div>
+              </section>
+            </div>
+          </aside>` : ""}
+        </div>
         <div class="ai-overlay__input-row">
           <textarea class="ai-overlay__input" rows="2" placeholder="${mode === "post" ? "Ex: rends-le plus court, ajoute une touche d'humour..." : "Colle un DM, un email, ou décris la fiche à créer..."}"></textarea>
           <button type="button" class="ai-overlay__send accent-ai">Envoyer</button>
@@ -3138,6 +3105,218 @@ function showAIAssistantOverlay(item, mode) {
     const input = overlay.querySelector(".ai-overlay__input");
     const sendBtn = overlay.querySelector(".ai-overlay__send");
     const entityBadge = overlay.querySelector(".ai-overlay__entity-badge");
+    const publicPreviewEl = overlay.querySelector("[data-preview='public']");
+    const privatePreviewEl = overlay.querySelector("[data-preview='private']");
+
+    function buildAdminDraftFromExtracted(extracted) {
+      if (!extracted || typeof extracted !== "object") return null;
+      const fields = extracted.fields && typeof extracted.fields === "object" ? extracted.fields : null;
+      if (!fields) return null;
+
+      const isCollaborator = extracted.entityType === "collaborator";
+      const existingItem = extracted.editId
+        ? (isCollaborator ? findCollaboratorById(extracted.editId) : findAffiliateById(extracted.editId))
+        : null;
+
+      if (isCollaborator) {
+        const base = existingItem || {
+          id: `preview-collab-${Date.now()}`,
+          category: "collaborator",
+          name: toText(fields.name) || "Preview collaborator",
+          platform: "x",
+          niche: "lifestyle",
+          format: "post",
+          tone: "authority",
+          primaryUrl: toText(fields.primaryUrl || fields.publicLink || fields.mainLink || fields.link),
+          publicLinks: [],
+          privateLinks: [],
+          taggedUrls: [],
+          contact: "",
+          email: "",
+          rates: "",
+          sourceNotes: "",
+          booking: normalizeBooking(null),
+          logos: [],
+          mediaImages: [],
+          mediaVideos: [],
+          visibility: { ...DEFAULT_COLLABORATOR_VISIBILITY },
+          fr: { tags: "", specs: "", caption: "" },
+          en: { tags: "", specs: "", caption: "" }
+        };
+
+        const merged = { ...base, ...fields };
+        const bookingPatch = fields.booking && typeof fields.booking === "object"
+          ? fields.booking
+          : {
+              dateLabel: fields.bookingDate,
+              timeLabel: fields.bookingTime,
+              location: fields.bookingLocation,
+              note: fields.bookingNote
+            };
+        merged.booking = normalizeBooking({ ...(base.booking || {}), ...(bookingPatch || {}) });
+        merged.publicLinks = fields.publicLinks != null ? normalizePrivateLinks(fields.publicLinks) : normalizePrivateLinks(base.publicLinks);
+        merged.privateLinks = fields.privateLinks != null ? normalizePrivateLinks(fields.privateLinks) : normalizePrivateLinks(base.privateLinks);
+        merged.taggedUrls = fields.taggedUrls != null ? normalizeTaggedUrls(fields.taggedUrls) : normalizeTaggedUrls(base.taggedUrls);
+        merged.visibility = { ...DEFAULT_COLLABORATOR_VISIBILITY, ...(base.visibility || {}), ...(fields.visibility || {}) };
+
+        if (fields.tags != null || fields.specs != null || fields.caption != null) {
+          merged.en = {
+            ...(base.en || {}),
+            tags: fields.tags != null ? toText(fields.tags) : toText(base.en?.tags),
+            specs: fields.specs != null ? toText(fields.specs) : toText(base.en?.specs),
+            caption: fields.caption != null ? toText(fields.caption) : toText(base.en?.caption)
+          };
+          merged.fr = {
+            ...(base.fr || {}),
+            tags: merged.en.tags,
+            specs: merged.en.specs,
+            caption: merged.en.caption
+          };
+        }
+
+        try {
+          return normalizeCollaboratorShape(merged, 0);
+        } catch (_) {
+          return null;
+        }
+      }
+
+      const base = existingItem || {
+        id: `preview-affiliate-${Date.now()}`,
+        category: "affiliate",
+        name: toText(fields.name) || "Preview affiliate",
+        platform: "x",
+        niche: "lifestyle",
+        format: "post",
+        tone: "authority",
+        primaryUrl: toText(fields.primaryUrl || fields.promoUrl || fields.contactUrl),
+        promoCode: "",
+        socialUrl: "",
+        mentions: "",
+        postRequirements: "",
+        specificities: "",
+        logos: [],
+        mediaImages: [],
+        mediaVideos: [],
+        visibility: { ...DEFAULT_AFFILIATE_VISIBILITY },
+        fr: { tags: "", specs: "", caption: "" },
+        en: { tags: "", specs: "", caption: "" }
+      };
+
+      const merged = {
+        ...base,
+        ...fields,
+        visibility: { ...DEFAULT_AFFILIATE_VISIBILITY, ...(base.visibility || {}), ...(fields.visibility || {}) }
+      };
+
+      try {
+        return normalizeAffiliateShape(merged, 0);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function renderIntakePreview(extracted) {
+      if (!publicPreviewEl || !privatePreviewEl) return;
+      const draft = buildAdminDraftFromExtracted(extracted);
+      if (!draft) {
+        const empty = `<div class="ai-overlay__preview-empty">Aperçu indisponible pour cette extraction</div>`;
+        publicPreviewEl.innerHTML = empty;
+        privatePreviewEl.innerHTML = empty;
+        return;
+      }
+      publicPreviewEl.innerHTML = buildWorkspaceCardMarkup(draft, true);
+      privatePreviewEl.innerHTML = buildWorkspaceCardMarkup(draft, false);
+    }
+
+    async function persistExtractedEntity(extracted) {
+      const draft = buildAdminDraftFromExtracted(extracted);
+      if (!draft) throw new Error("Extraction incomplete");
+
+      if (extracted.entityType === "collaborator") {
+        const remote = isRemotePersistenceEnabledFor("collaborators");
+
+        if (extracted.editId) {
+          draft.id = extracted.editId;
+          if (remote) {
+            await remoteUpsertCollaborator(draft);
+            await loadCollaborators();
+          } else {
+            upsertLocalCollaborator(draft);
+            saveLocalCollaborators();
+          }
+          rerenderAll();
+          return remote ? "Collaborateur modifie et sauve en base." : "Collaborateur modifie et sauve localement.";
+        }
+
+        const candidate = mergeUniqueCollaborators(state.collaborators, [draft]);
+        if (candidate.addedCount === 0) {
+          const existing = state.collaborators.find((item) => collaboratorDedupKey(item) === collaboratorDedupKey(draft));
+          if (!existing) throw new Error("Doublon detecte");
+          const updated = { ...draft, id: existing.id };
+          if (remote) {
+            await remoteUpsertCollaborator(updated);
+            await loadCollaborators();
+          } else {
+            upsertLocalCollaborator(updated);
+            saveLocalCollaborators();
+          }
+          rerenderAll();
+          return remote ? "Collaborateur mis a jour et sauve en base." : "Collaborateur mis a jour et sauve localement.";
+        }
+
+        if (remote) {
+          await remoteUpsertCollaborator({ ...draft, id: "" });
+          await loadCollaborators();
+        } else {
+          state.localCollaborators.push(draft);
+          saveLocalCollaborators();
+        }
+        rerenderAll();
+        return remote ? "Collaborateur ajoute et sauve en base." : "Collaborateur ajoute et sauve localement.";
+      }
+
+      const remote = isRemotePersistenceEnabledFor("affiliates");
+
+      if (extracted.editId) {
+        draft.id = extracted.editId;
+        if (remote) {
+          await remoteUpsertAffiliate(draft);
+          await loadAffiliates();
+        } else {
+          upsertLocalAffiliate(draft);
+          saveLocalAffiliates();
+        }
+        rerenderAll();
+        return remote ? "Affiliation modifiee et sauvee en base." : "Affiliation modifiee et sauvee localement.";
+      }
+
+      const candidate = mergeUniqueAffiliates(state.affiliates, [draft]);
+      if (candidate.addedCount === 0) {
+        const existing = state.affiliates.find((item) => affiliateDedupKey(item) === affiliateDedupKey(draft));
+        if (!existing) throw new Error("Doublon detecte");
+        const updated = { ...draft, id: existing.id };
+        if (remote) {
+          await remoteUpsertAffiliate(updated);
+          await loadAffiliates();
+        } else {
+          upsertLocalAffiliate(updated);
+          saveLocalAffiliates();
+        }
+        rerenderAll();
+        return remote ? "Affiliation mise a jour et sauvee en base." : "Affiliation mise a jour et sauvee localement.";
+      }
+
+      if (remote) {
+        await remoteUpsertAffiliate(draft);
+        await loadAffiliates();
+      } else {
+        state.localAffiliates.push(draft);
+        saveLocalAffiliates();
+      }
+      rerenderAll();
+      return remote ? "Affiliation ajoutee et sauvee en base." : "Affiliation ajoutee et sauvee localement.";
+    }
 
     function appendMessage(role, text) {
       const bubble = document.createElement("div");
@@ -3322,6 +3501,13 @@ function showAIAssistantOverlay(item, mode) {
 
         if (mode === "intake" && data.extracted) {
           appendExtractedBlock(data.extracted);
+          renderIntakePreview(data.extracted);
+          try {
+            const saveMsg = await persistExtractedEntity(data.extracted);
+            appendMessage("assistant", `Auto-save: ${saveMsg}`);
+          } catch (saveError) {
+            appendMessage("assistant", `Auto-save failed: ${String(saveError?.message || saveError)}`);
+          }
         }
 
         if (mode === "intake" && data.deleteRequest) {

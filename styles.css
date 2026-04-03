@@ -625,6 +625,10 @@ textarea:focus {
   overflow-wrap: anywhere;
   word-break: break-word;
   white-space: normal;
+  transform: translate(var(--title-shift-x, 0), var(--title-shift-y, 0)) scale(var(--title-scale, 1));
+  transform-origin: left top;
+  width: fit-content;
+  max-width: 122%;
 }
 
 .collab-info .meta {
@@ -698,7 +702,15 @@ textarea:focus {
   padding: 0.26rem 0.5rem;
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.08);
+  transform: translateX(var(--url-shift-x, 0)) scale(var(--url-scale, 1));
+  transform-origin: left center;
+  width: fit-content;
+  max-width: 118%;
   transition: background 120ms;
+
+.public-card.card-typo-wild .collab-info h2 {
+  letter-spacing: 0.018em;
+}
   flex-shrink: 0;
 }
 
@@ -1113,6 +1125,10 @@ textarea:focus {
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
 }
 
+.ai-overlay__inner--intake {
+  max-width: 1120px;
+}
+
 .ai-overlay__header {
   display: flex;
   align-items: center;
@@ -1183,6 +1199,17 @@ textarea:focus {
 
 .ai-overlay__close:hover { color: #fff; }
 
+.ai-overlay__body {
+  flex: 1;
+  min-height: 0;
+}
+
+.ai-overlay__body.is-intake {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+  gap: 0;
+}
+
 /* Thread */
 .ai-overlay__thread {
   flex: 1;
@@ -1192,6 +1219,69 @@ textarea:focus {
   flex-direction: column;
   gap: 0.6rem;
   min-height: 0;
+}
+
+.ai-overlay__preview-pane {
+  border-left: 1px solid rgba(200, 134, 10, 0.2);
+  background: rgba(12, 8, 3, 0.55);
+  padding: 0.75rem;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 0.55rem;
+  min-height: 0;
+}
+
+.ai-overlay__preview-head {
+  color: #eec77b;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 700;
+}
+
+.ai-overlay__preview-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+  min-height: 0;
+}
+
+.ai-overlay__preview-col {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 0.35rem;
+  min-height: 0;
+}
+
+.ai-overlay__preview-col h4 {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ai-overlay__preview {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.4rem;
+}
+
+.ai-overlay__preview .affiliate-card {
+  margin: 0;
+}
+
+.ai-overlay__preview-empty {
+  min-height: 94px;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.76rem;
+  text-align: center;
+  padding: 0.6rem;
 }
 
 .ai-overlay__msg {
@@ -1645,6 +1735,18 @@ body.collab-workspace-active main > *:not(.collab-workspace) {
   cursor: default;
 }
 
+@media (max-width: 980px) {
+  .ai-overlay__body.is-intake {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-overlay__preview-pane {
+    border-left: 0;
+    border-top: 1px solid rgba(200, 134, 10, 0.2);
+    max-height: 44vh;
+  }
+}
+
 /* Composer AI button */
 .composer__ai-btn {
   margin-top: 0.5rem;
@@ -1976,10 +2078,17 @@ body.is-locked .cards-grid {
   .collab-info h2 {
     font-size: 0.98rem;
     line-height: 1.22;
+    transform: none;
+    max-width: 100%;
   }
 
   .collab-panel {
     padding: 0.76rem;
+  }
+
+  .collab-panel__link {
+    transform: none;
+    max-width: 100%;
   }
 }
 
@@ -2381,4 +2490,64 @@ body.dark-collab-mode .affiliate-card.public-card.card--editorial {
 /* ============================================================
    END DARK COLLAB MODE
    ============================================================ */
+
+/* ============================================================
+   BOLD MOSAIC LOOK
+   ============================================================ */
+
+body {
+  background:
+    radial-gradient(circle at 10% 10%, rgba(255, 122, 0, 0.24) 0%, transparent 30%),
+    radial-gradient(circle at 88% 14%, rgba(255, 235, 0, 0.34) 0%, transparent 28%),
+    repeating-linear-gradient(135deg, rgba(16, 16, 16, 0.05) 0 8px, rgba(255, 255, 255, 0.05) 8px 16px),
+    linear-gradient(180deg, #ffd000 0%, #ffbb00 100%);
+}
+
+body.dark-collab-mode {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(91, 139, 255, 0.2) 0%, transparent 34%),
+    radial-gradient(circle at 82% 18%, rgba(42, 64, 122, 0.3) 0%, transparent 30%),
+    repeating-radial-gradient(circle at 30% 40%, rgba(255, 255, 255, 0.018) 0 2px, transparent 2px 7px),
+    linear-gradient(165deg, #05070e 0%, #0a1020 52%, #12182a 100%);
+}
+
+body.is-locked .cards-grid {
+  display: grid;
+  grid-auto-flow: dense;
+  gap: 1rem;
+}
+
+body.is-locked .public-card.card-template--square {
+  aspect-ratio: 1 / 1;
+}
+
+body.is-locked .public-card.card-template--vert {
+  aspect-ratio: 4 / 5;
+}
+
+body.is-locked .public-card.card-template--horz {
+  aspect-ratio: 16 / 10;
+}
+
+body.is-locked .public-card.card-template--square,
+body.is-locked .public-card.card-template--vert,
+body.is-locked .public-card.card-template--horz {
+  min-height: 0;
+  transform: none;
+}
+
+@media (min-width: 1080px) {
+  body.is-locked .public-card.card-template--horz {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 720px) {
+  body.is-locked .public-card.card-template--square,
+  body.is-locked .public-card.card-template--vert,
+  body.is-locked .public-card.card-template--horz {
+    aspect-ratio: auto;
+    min-height: 300px;
+  }
+}
 
