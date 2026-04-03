@@ -114,7 +114,17 @@
           <button type="button" id="aiAssistantBtn" class="accent-ai composer__ai-btn">✦ HeyHi</button>
         </div>
 
-        <form id="affiliateForm" class="composer-form">
+        <div class="composer__workspace" id="adminWorkspace">
+          <section class="admin-chat" aria-label="HeyHi admin chat">
+            <h3>HeyHi Workspace</h3>
+            <div id="adminHeyhiThread" class="admin-chat__thread" aria-live="polite"></div>
+            <div class="admin-chat__input-row">
+              <textarea id="adminHeyhiInput" rows="2" placeholder="Dis a HeyHi quoi créer ou modifier..."></textarea>
+              <button type="button" id="adminHeyhiSend" class="accent-ai">Envoyer</button>
+            </div>
+          </section>
+
+          <form id="affiliateForm" class="composer-form">
           <div class="quick-add-bar form-collaborator-only is-hidden">
             <button type="button" id="quickAddToggle">⚡ Mode rapide</button>
           </div>
@@ -244,7 +254,8 @@
           </div>
 
 
-        </form>
+          </form>
+        </div>
       </section>
 
       <section id="cardsGrid" class="cards-grid" aria-live="polite"></section>

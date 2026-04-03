@@ -56,6 +56,7 @@ const refs = {
   viewButtons: Array.from(document.querySelectorAll(".view-btn")),
   copyAllTemplate: document.getElementById("copyAllTemplate"),
   copyAllCollaboratorTemplate: document.getElementById("copyAllCollaboratorTemplate"),
+  composerRoot: document.querySelector(".composer"),
   composerTitle: document.getElementById("composerTitle"),
   composerSubtitle: document.getElementById("composerSubtitle"),
   importTitle: document.getElementById("importTitle"),
@@ -2895,6 +2896,9 @@ function applyViewMode() {
 function applyAccessMode() {
   document.body.classList.toggle("is-unlocked", state.isUnlocked);
   document.body.classList.toggle("is-locked", !state.isUnlocked);
+  if (refs.composerRoot) {
+    refs.composerRoot.classList.toggle("is-admin-workspace", state.isUnlocked);
+  }
   if (state.isUnlocked) {
     closeCollaboratorWorkspace();
   }
@@ -3976,8 +3980,135 @@ function bindCategoryFormSelect() {
 }
 
 function bindComposerActions() {
+  const adminThread = document.getElementById("adminHeyhiThread");
+  const adminInput = document.getElementById("adminHeyhiInput");
+  const adminSend = document.getElementById("adminHeyhiSend");
+  let adminHistory = [];
+  let adminBusy = false;
+  let adminBooted = false;
+
+  function appendAdminMsg(role, text) {
+    if (!adminThread) return;
+    const bubble = document.createElement("div");
+    bubble.className = "admin-chat__msg" + (role === "user" ? " is-user" : " is-assistant");
+    bubble.textContent = text;
+    adminThread.appendChild(bubble);
+    adminThread.scrollTop = adminThread.scrollHeight;
+  }
+
+  function shouldAutoSubmitFromExtraction(extracted) {
+    if (!extracted || typeof extracted !== "object") return false;
+    if (toText(extracted.editId)) return true;
+    const fields = extracted.fields && typeof extracted.fields === "object" ? extracted.fields : {};
+    const name = toText(fields.name);
+    const primaryUrl = toText(fields.primaryUrl || fields.publicLink || fields.mainLink || fields.link || fields.promoUrl || fields.contactUrl);
+    return Boolean(name && primaryUrl);
+  }
+
+  function applyExtractedToFormInline(extracted) {
+    if (!extracted || typeof extracted !== "object") return;
+    const fCatEl = document.getElementById("fCategory");
+    if (fCatEl) {
+      fCatEl.value = extracted.entityType === "collaborator" ? "collaborator" : "affiliate";
+      applyCategoryToForm(fCatEl.value);
+    }
+
+    const existingItem = extracted.editId
+      ? (extracted.entityType === "collaborator" ? findCollaboratorById(extracted.editId) : findAffiliateById(extracted.editId))
+      : null;
+
+    setComposerEditMode(existingItem || null);
+
+    const fields = existingItem ? { ...existingItem, ...extracted.fields } : extracted.fields;
+    state.pendingVisibility = fields?.visibility || null;
+    state.pendingTaggedUrls = Array.isArray(fields?.taggedUrls) ? fields.taggedUrls : null;
+
+    if (extracted.entityType === "collaborator") {
+      populateFormFromCollaborator(fields || {});
+    } else {
+      populateFormFromAffiliate(fields || {});
+    }
+
+    if (shouldAutoSubmitFromExtraction(extracted)) {
+      setTimeout(() => refs.affiliateForm?.requestSubmit(), 0);
+    }
+  }
+
+  async function sendInlineHeyHi(userMessage, isAuto = false) {
+    if (!adminThread || !adminInput || !adminSend) return;
+    if (!state.isUnlocked) return;
+    if (adminBusy) return;
+    if (!isAuto && !toText(userMessage)) return;
+
+    if (!isAuto) {
+      adminHistory.push({ role: "user", content: userMessage });
+      appendAdminMsg("user", userMessage);
+      adminInput.value = "";
+    }
+
+    adminBusy = true;
+    adminInput.disabled = true;
+    adminSend.disabled = true;
+
+    try {
+      const res = await fetch("/api/ai-assistant", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "intake",
+          lang: state.activeLang,
+          entities: {
+            affiliates: state.affiliates.map((a) => ({ id: a.id, name: a.name })),
+            collaborators: state.collaborators.map((c) => ({ id: c.id, name: c.name }))
+          },
+          messages: adminHistory
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error || "HeyHi unavailable");
+
+      const reply = toText(data.message);
+      if (reply) {
+        adminHistory.push({ role: "assistant", content: reply });
+        appendAdminMsg("assistant", reply);
+      }
+
+      if (data.extracted) {
+        applyExtractedToFormInline(data.extracted);
+        appendAdminMsg("assistant", "Carte appliquée dans le formulaire.");
+      }
+      adminBooted = true;
+    } catch (error) {
+      appendAdminMsg("assistant", `Erreur: ${String(error?.message || error)}`);
+    } finally {
+      adminBusy = false;
+      adminInput.disabled = false;
+      adminSend.disabled = false;
+    }
+  }
+
   if (refs.aiAssistantBtn) {
-    refs.aiAssistantBtn.addEventListener("click", () => showAIAssistantOverlay(null, "intake"));
+    refs.aiAssistantBtn.addEventListener("click", () => {
+      if (!state.isUnlocked) {
+        showAIAssistantOverlay(null, "intake");
+        return;
+      }
+      adminInput?.focus();
+      if (!adminBooted) sendInlineHeyHi(null, true);
+    });
+  }
+
+  if (adminSend) {
+    adminSend.addEventListener("click", () => sendInlineHeyHi(adminInput?.value || ""));
+  }
+  if (adminInput) {
+    adminInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendInlineHeyHi(adminInput.value || "");
+      }
+    });
   }
 
   const fSourceNotes = document.getElementById("fSourceNotes");
