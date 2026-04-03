@@ -677,6 +677,201 @@ function removeUnlockedId(id) {
   sessionStorage.setItem(UNLOCKED_COLLAB_KEY, JSON.stringify(ids));
 }
 
+let activeCollabWorkspace = null;
+
+function closeCollaboratorWorkspace() {
+  if (!activeCollabWorkspace) return;
+  activeCollabWorkspace.overlay.remove();
+  activeCollabWorkspace = null;
+  document.body.classList.remove("collab-workspace-active");
+}
+
+function buildWorkspaceCardMarkup(item, isPublic) {
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = (isPublic ? publicCardMarkup(item, "default") : privateCardMarkup(item)).trim();
+  const card = wrapper.firstElementChild;
+  if (!card) return "";
+  card.classList.add("workspace-preview-card");
+  card.querySelector(".card-actions")?.remove();
+  card.querySelector(".collab-unlocked-tools")?.remove();
+  return card.outerHTML;
+}
+
+function draftFromExtractedCollaborator(baseCollab, fields) {
+  if (!fields || typeof fields !== "object") return baseCollab;
+  const draft = { ...baseCollab, ...fields };
+
+  const bookingObject = fields.booking && typeof fields.booking === "object"
+    ? fields.booking
+    : {
+        dateLabel: fields.bookingDate,
+        timeLabel: fields.bookingTime,
+        location: fields.bookingLocation,
+        note: fields.bookingNote
+      };
+
+  draft.booking = normalizeBooking({ ...(baseCollab.booking || {}), ...(bookingObject || {}) });
+
+  if (fields.publicLinks != null) draft.publicLinks = normalizePrivateLinks(fields.publicLinks);
+  if (fields.privateLinks != null) draft.privateLinks = normalizePrivateLinks(fields.privateLinks);
+  if (fields.taggedUrls != null) draft.taggedUrls = normalizeTaggedUrls(fields.taggedUrls);
+
+  if (fields.tags || fields.specs || fields.caption) {
+    draft.en = {
+      ...(draft.en || {}),
+      tags: fields.tags != null ? toText(fields.tags) : toText(draft.en?.tags),
+      specs: fields.specs != null ? toText(fields.specs) : toText(draft.en?.specs),
+      caption: fields.caption != null ? toText(fields.caption) : toText(draft.en?.caption)
+    };
+  }
+
+  try {
+    return normalizeCollaboratorShape(draft, 0);
+  } catch (_) {
+    return baseCollab;
+  }
+}
+
+function upsertCollaboratorWorkspace(collabId, collab) {
+  if (!collabId || !collab) return;
+
+  if (activeCollabWorkspace && activeCollabWorkspace.collabId === collabId) {
+    activeCollabWorkspace.setDraft(collab);
+    return;
+  }
+
+  closeCollaboratorWorkspace();
+
+  const overlay = document.createElement("section");
+  overlay.className = "collab-workspace";
+  overlay.innerHTML = `
+    <div class="collab-workspace__backdrop" data-action="close-workspace"></div>
+    <div class="collab-workspace__panel" role="dialog" aria-modal="true">
+      <div class="collab-workspace__head">
+        <h3>HeyHi Workspace</h3>
+        <button type="button" class="collab-workspace__close" data-action="close-workspace" aria-label="Close">×</button>
+      </div>
+      <div class="collab-workspace__layout">
+        <section class="collab-workspace__col">
+          <h4>Public preview</h4>
+          <div class="collab-workspace__preview" data-preview="public"></div>
+        </section>
+        <section class="collab-workspace__col">
+          <h4>Private preview</h4>
+          <div class="collab-workspace__preview" data-preview="private"></div>
+        </section>
+        <section class="collab-workspace__chat">
+          <h4>Chat with HeyHi</h4>
+          <div class="collab-workspace__thread" data-thread></div>
+          <div class="collab-workspace__input-row">
+            <textarea rows="2" placeholder="Tell HeyHi what to update..."></textarea>
+            <button type="button" class="accent-ai">Send</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  `;
+
+  const publicPreviewEl = overlay.querySelector("[data-preview='public']");
+  const privatePreviewEl = overlay.querySelector("[data-preview='private']");
+  const threadEl = overlay.querySelector("[data-thread]");
+  const textarea = overlay.querySelector("textarea");
+  const sendBtn = overlay.querySelector(".collab-workspace__input-row button");
+
+  let draft = collab;
+  let history = [];
+  let isBusy = false;
+
+  function appendThread(role, text) {
+    const bubble = document.createElement("div");
+    bubble.className = `collab-workspace__msg is-${role}`;
+    bubble.textContent = text;
+    threadEl.appendChild(bubble);
+    threadEl.scrollTop = threadEl.scrollHeight;
+  }
+
+  function renderPreviews() {
+    publicPreviewEl.innerHTML = buildWorkspaceCardMarkup(draft, true);
+    privatePreviewEl.innerHTML = buildWorkspaceCardMarkup(draft, false);
+  }
+
+  function setBusy(nextBusy) {
+    isBusy = nextBusy;
+    textarea.disabled = nextBusy;
+    sendBtn.disabled = nextBusy;
+  }
+
+  async function sendToHeyHi(message, isBoot = false) {
+    if (isBusy) return;
+    if (!isBoot && !toText(message)) return;
+
+    if (!isBoot) {
+      history.push({ role: "user", content: message });
+      appendThread("user", message);
+      textarea.value = "";
+    }
+
+    setBusy(true);
+    try {
+      const res = await fetch("/api/ai-assistant", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "intake",
+          lang: "en",
+          item: { id: collabId, name: draft.name },
+          entities: { affiliates: [], collaborators: [{ id: collabId, name: draft.name }] },
+          messages: history
+        })
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || !payload.ok) throw new Error(payload.error || "HeyHi unavailable");
+
+      const reply = toText(payload.message);
+      if (reply) {
+        history.push({ role: "assistant", content: reply });
+        appendThread("assistant", reply);
+      }
+
+      if (payload.extracted?.fields) {
+        draft = draftFromExtractedCollaborator(draft, payload.extracted.fields);
+        renderPreviews();
+      }
+    } catch (error) {
+      appendThread("assistant", `Error: ${String(error?.message || error)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  overlay.querySelectorAll("[data-action='close-workspace']").forEach((node) => {
+    node.addEventListener("click", () => closeCollaboratorWorkspace());
+  });
+
+  sendBtn.addEventListener("click", () => sendToHeyHi(textarea.value));
+  textarea.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      sendToHeyHi(textarea.value);
+    }
+  });
+
+  document.body.appendChild(overlay);
+  document.body.classList.add("collab-workspace-active");
+  renderPreviews();
+  sendToHeyHi(null, true);
+
+  activeCollabWorkspace = {
+    collabId,
+    overlay,
+    setDraft(nextDraft) {
+      draft = nextDraft;
+      renderPreviews();
+    }
+  };
+}
+
 async function swapCardToPrivate(collabId) {
   const card = document.querySelector(`[data-collab-id="${CSS.escape(collabId)}"]`);
   if (!card) return;
@@ -703,6 +898,7 @@ async function swapCardToPrivate(collabId) {
   if (newCard) {
     card.replaceWith(newCard);
     enhanceUnlockedCollaboratorCard(newCard, collabId, collab);
+    upsertCollaboratorWorkspace(collabId, collab);
     newCard.classList.add("is-shared");
     setTimeout(() => newCard.classList.remove("is-shared"), 2000);
   }
@@ -712,7 +908,7 @@ function enhanceUnlockedCollaboratorCard(cardEl, collabId, collab) {
   if (!cardEl || !collabId) return;
   cardEl.classList.add("collab-private-unlocked");
 
-  cardEl.querySelectorAll("[data-action='edit'], [data-action='duplicate'], [data-action='ai-assistant']").forEach((btn) => btn.remove());
+  cardEl.querySelectorAll("[data-action='edit'], [data-action='duplicate']").forEach((btn) => btn.remove());
 
   const actions = cardEl.querySelector(".card-actions");
   if (!actions) return;
@@ -728,33 +924,56 @@ function enhanceUnlockedCollaboratorCard(cardEl, collabId, collab) {
   const controls = document.createElement("section");
   controls.className = "content-block collab-unlocked-tools";
   controls.innerHTML = `
-    <h3>Manage your card</h3>
-    <form class="collab-inline-form" data-form="booking">
-      <label>Date</label>
-      <input name="dateLabel" value="${escapeHtml(booking.dateLabel)}" placeholder="April 25" />
-      <label>Time</label>
-      <input name="timeLabel" value="${escapeHtml(booking.timeLabel)}" placeholder="2pm" />
-      <label>Location</label>
-      <input name="location" value="${escapeHtml(booking.location)}" placeholder="Montreal" />
-      <label>Note</label>
-      <input name="note" value="${escapeHtml(booking.note)}" placeholder="Optional note" />
-      <button type="submit" class="inline-save-btn">Save booking</button>
-    </form>
-    <form class="collab-inline-form" data-form="tagged-url">
-      <label>URL label (English)</label>
-      <input name="label" value="${escapeHtml(taggedUrlDefaults.label)}" placeholder="Consent form" />
-      <label>URL</label>
-      <input name="url" value="${escapeHtml(taggedUrlDefaults.url)}" placeholder="https://..." />
-      <label>Tags (comma separated, English)</label>
-      <input name="tags" value="${escapeHtml(taggedUrlDefaults.tags)}" placeholder="grabbys, april-20-26" />
-      <label>Visibility</label>
-      <select name="visibility">
-        <option value="private" selected>private</option>
-        <option value="public">public</option>
-        <option value="both">both</option>
-      </select>
-      <button type="submit" class="inline-save-btn">Add tagged URL</button>
-    </form>
+    <h3>Your card controls</h3>
+    <p class="collab-unlocked-tools__hint">Only two editable zones right now.</p>
+
+    <div class="collab-scope collab-scope--private">
+      <div class="collab-scope__title">Private</div>
+      <div class="collab-scope__desc">Visible to you and admin only.</div>
+      <form class="collab-inline-form" data-form="booking">
+        <div class="collab-inline-grid">
+          <label>Date
+            <input name="dateLabel" value="${escapeHtml(booking.dateLabel)}" placeholder="April 25" />
+          </label>
+          <label>Time
+            <input name="timeLabel" value="${escapeHtml(booking.timeLabel)}" placeholder="2pm" />
+          </label>
+          <label>Location
+            <input name="location" value="${escapeHtml(booking.location)}" placeholder="Montreal" />
+          </label>
+          <label>Note (optional)
+            <input name="note" value="${escapeHtml(booking.note)}" placeholder="Optional note" />
+          </label>
+        </div>
+        <button type="submit" class="inline-save-btn">Save private booking</button>
+      </form>
+    </div>
+
+    <div class="collab-scope collab-scope--public">
+      <div class="collab-scope__title">Public link block</div>
+      <div class="collab-scope__desc">Add shareable links and choose who can see them.</div>
+      <form class="collab-inline-form" data-form="tagged-url">
+        <div class="collab-inline-grid">
+          <label>Label
+            <input name="label" value="${escapeHtml(taggedUrlDefaults.label)}" placeholder="Consent form" />
+          </label>
+          <label>URL
+            <input name="url" value="${escapeHtml(taggedUrlDefaults.url)}" placeholder="https://..." />
+          </label>
+          <label>Tags
+            <input name="tags" value="${escapeHtml(taggedUrlDefaults.tags)}" placeholder="grabbys, april-20-26" />
+          </label>
+          <label>Visibility
+            <select name="visibility">
+              <option value="private" selected>private</option>
+              <option value="public">public</option>
+              <option value="both">both</option>
+            </select>
+          </label>
+        </div>
+        <button type="submit" class="inline-save-btn">Add link</button>
+      </form>
+    </div>
   `;
 
   actions.insertAdjacentElement("beforebegin", controls);
@@ -2557,6 +2776,9 @@ function applyViewMode() {
 function applyAccessMode() {
   document.body.classList.toggle("is-unlocked", state.isUnlocked);
   document.body.classList.toggle("is-locked", !state.isUnlocked);
+  if (state.isUnlocked) {
+    closeCollaboratorWorkspace();
+  }
   if (refs.accessStatus) {
     if (state.authMode === "api-unavailable") {
       refs.accessStatus.textContent = "API indisponible: lancer le serveur dev (mode API-only).";
@@ -3158,6 +3380,21 @@ function bindCardActions() {
         } else if (actionButton.dataset.action === "copy-all") {
           await copyText(getCopyAllText(privateUnlockedCard));
           setFeedback(privateUnlockedCard, "Card copied");
+        } else if (actionButton.dataset.action === "ai-assistant") {
+          try {
+            const collabId = privateUnlockedCard.dataset.collabId || privateUnlockedCard.dataset.id || "";
+            if (!collabId) return;
+            const res = await fetch("/api/collaborators/private?id=" + encodeURIComponent(collabId), { credentials: "include" });
+            const data = await res.json().catch(() => ({}));
+            const collaborator = data?.collaborator || null;
+            if (!res.ok || !collaborator) {
+              setFeedback(privateUnlockedCard, "AI unavailable", true);
+              return;
+            }
+            showAIAssistantOverlay(collaborator, "post");
+          } catch (_) {
+            setFeedback(privateUnlockedCard, "AI unavailable", true);
+          }
         }
         return;
       }

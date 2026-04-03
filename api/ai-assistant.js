@@ -1,4 +1,5 @@
-const { isAuthenticated } = require("../lib/auth");
+const { isAuthenticated, parseCookies } = require("../lib/auth");
+const { verifyToken } = require("../lib/collab-token");
 const { enforceRateLimit, enforcePayloadLimit } = require("../lib/request-guards");
 
 // Affiliate fields reference for the intake system prompt
@@ -193,7 +194,11 @@ module.exports = async function handler(req, res) {
   if (await enforceRateLimit(req, res, { name: "ai-assistant", limit: 60, windowMs: 5 * 60 * 1000 })) return;
   if (enforcePayloadLimit(req, res, 384 * 1024)) return;
 
-  if (!isAuthenticated(req)) {
+  const isAdmin = isAuthenticated(req);
+  const cookies = parseCookies(req.headers.cookie || "");
+  const collaboratorId = verifyToken(cookies.collab_token || "");
+
+  if (!isAdmin && !collaboratorId) {
     res.status(401).json({ ok: false, error: "Unauthorized" });
     return;
   }
@@ -204,7 +209,7 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const { mode = "post", lang = "fr", item = null, entities = {}, messages: extraMessages = [] } = req.body || {};
+  let { mode = "post", lang = "fr", item = null, entities = {}, messages: extraMessages = [] } = req.body || {};
 
   if (mode !== "post" && mode !== "intake") {
     res.status(400).json({ ok: false, error: "Invalid mode" });
@@ -214,6 +219,23 @@ module.exports = async function handler(req, res) {
   if (mode === "post" && (!item || typeof item !== "object")) {
     res.status(400).json({ ok: false, error: "Missing item payload for post mode" });
     return;
+  }
+
+  if (!isAdmin && collaboratorId) {
+    if (mode === "post") {
+      const itemId = String(item?.id || "").trim();
+      if (!itemId || itemId !== collaboratorId) {
+        res.status(403).json({ ok: false, error: "Forbidden for this collaborator" });
+        return;
+      }
+    }
+
+    if (mode === "intake") {
+      entities = {
+        affiliates: [],
+        collaborators: [{ id: collaboratorId, name: String(item?.name || "My card") }]
+      };
+    }
   }
 
   // Build system prompt based on mode
