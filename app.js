@@ -1433,6 +1433,56 @@ function detectPrivateLinkLabel(url, index) {
   return `Lien ${index + 1}`;
 }
 
+function isGenericLinkLabel(label) {
+  const value = toText(label).trim();
+  if (!value) return true;
+  if (/^\d+$/.test(value)) return true;
+  if (/^(?:lien|link)\s*\d+$/i.test(value)) return true;
+  return false;
+}
+
+function getPublicLinkMeta(url, label = "") {
+  const sourceUrl = toText(url);
+  const sourceLabel = toText(label);
+  let hostname = "";
+  let hostAndPath = sourceUrl;
+
+  if (isValidHttpUrl(sourceUrl)) {
+    try {
+      const parsed = new URL(sourceUrl);
+      hostname = parsed.hostname.replace(/^www\./i, "").toLowerCase();
+      const pathname = parsed.pathname.replace(/\/$/, "");
+      hostAndPath = `${hostname}${pathname}` || hostname || sourceUrl;
+    } catch (error) {
+      hostAndPath = sourceUrl;
+    }
+  }
+
+  const hasCustomLabel = !isGenericLinkLabel(sourceLabel);
+  const displayText = hasCustomLabel ? `${sourceLabel} - ${hostAndPath}` : hostAndPath;
+  const fallbackText = (hostname || hostAndPath || "link")
+    .replace(/[^a-z0-9]/gi, "")
+    .slice(0, 2)
+    .toUpperCase() || "LK";
+
+  return {
+    displayText,
+    fallbackText,
+    faviconUrl: hostname
+      ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=64`
+      : ""
+  };
+}
+
+function publicLinkChipMarkup(url, label = "") {
+  const meta = getPublicLinkMeta(url, label);
+  const faviconMarkup = meta.faviconUrl
+    ? `<img class="collab-panel__favicon" src="${escapeHtml(meta.faviconUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add('is-hidden'); this.nextElementSibling.classList.remove('is-hidden');" /><span class="collab-panel__favicon-fallback is-hidden">${escapeHtml(meta.fallbackText)}</span>`
+    : `<span class="collab-panel__favicon-fallback">${escapeHtml(meta.fallbackText)}</span>`;
+
+  return `<span class="collab-panel__link-chip">${faviconMarkup}</span><span class="collab-panel__link-text">${escapeHtml(meta.displayText)}</span>`;
+}
+
 function extractCollaboratorInsights(rawText) {
   const source = toText(rawText);
   if (!source) {
@@ -1632,12 +1682,7 @@ function publicCardMarkup(item, archetype = "default") {
   if (isCollabType) {
     const allLinks = [];
     if (item.primaryUrl && isPublicVisible(item, "primaryUrl")) {
-      let display = item.primaryUrl;
-      try {
-        const u = new URL(item.primaryUrl);
-        display = u.hostname.replace(/^www\./, "") + u.pathname.replace(/\/$/, "");
-      } catch (_) {}
-      allLinks.push({ label: display, url: item.primaryUrl });
+      allLinks.push({ label: "", url: item.primaryUrl });
     }
     if (isPublicVisible(item, "publicLinks")) {
       (item.publicLinks || []).forEach((pl) => allLinks.push(pl));
@@ -1646,13 +1691,13 @@ function publicCardMarkup(item, archetype = "default") {
       ? (item.taggedUrls || []).filter((entry) => entry.visibility === "public" || entry.visibility === "both")
       : [];
     const linksMarkup = allLinks
-      .map((l) => `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener noreferrer" class="collab-panel__link">${escapeHtml(l.label || l.url)}</a>`)
+      .map((l) => `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener noreferrer" class="collab-panel__link">${publicLinkChipMarkup(l.url, l.label)}</a>`)
       .join("");
     const taggedUrlMarkup = taggedUrls
       .map((entry) => {
         const tagsMarkup = entry.tags?.length ? `<span class="tagged-url__tags">${entry.tags.map((tag) => `<span class="tagged-url__tag">${escapeHtml(tag)}</span>`).join("")}</span>` : "";
         const copyValue = `${entry.label}: ${entry.url}${entry.tags?.length ? ` [${entry.tags.join(", ")}]` : ""}`;
-        return `<button type="button" class="tagged-url-row" data-action="copy-inline-value" data-copy-value="${escapeHtml(copyValue)}"><span class="tagged-url__label">${escapeHtml(entry.label)}</span><span class="tagged-url__url">${escapeHtml(entry.url)}</span>${tagsMarkup}</button>`;
+        return `<button type="button" class="tagged-url-row" data-action="copy-inline-value" data-copy-value="${escapeHtml(copyValue)}"><span class="tagged-url__label">${escapeHtml(entry.label)}</span><span class="tagged-url__url">${publicLinkChipMarkup(entry.url, "")}<span class="tagged-url__url-raw">${escapeHtml(entry.url)}</span></span>${tagsMarkup}</button>`;
       })
       .join("");
     const contactMarkup = item.contact && isPublicVisible(item, "contact")
@@ -1673,7 +1718,7 @@ function publicCardMarkup(item, archetype = "default") {
       ? `<div class="collab-panel__copy-row" data-action="copy-inline-value" data-copy-value="${escapeHtml(item.promoCode)}" title="Cliquer pour copier le code">Code : ${escapeHtml(item.promoCode)}</div>`
       : "";
     const primaryUrlMarkup = item.primaryUrl && isPublicVisible(item, "primaryUrl")
-      ? `<a href="${escapeHtml(item.primaryUrl)}" target="_blank" rel="noopener noreferrer" class="collab-panel__link">${escapeHtml(item.primaryUrl)}</a>`
+      ? `<a href="${escapeHtml(item.primaryUrl)}" target="_blank" rel="noopener noreferrer" class="collab-panel__link">${publicLinkChipMarkup(item.primaryUrl, "")}</a>`
       : "";
     panelContent = `
       <div class="collab-panel__name">${escapeHtml(item.name)}</div>
