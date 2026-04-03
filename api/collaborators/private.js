@@ -4,6 +4,7 @@ const {
   addCollaboratorTaggedUrl
 } = require("../../lib/collaborators-store");
 const { verifyToken } = require("../../lib/collab-token");
+const { enforceRateLimit, enforcePayloadLimit } = require("../../lib/request-guards");
 
 function parseCookies(header) {
   const out = {};
@@ -19,6 +20,15 @@ module.exports = async function handler(req, res) {
   if (req.method !== "GET" && req.method !== "POST") {
     res.status(405).json({ ok: false, error: "Method not allowed" });
     return;
+  }
+
+  if (req.method === "GET") {
+    if (await enforceRateLimit(req, res, { name: "collaborators-private-read", limit: 240, windowMs: 5 * 60 * 1000 })) return;
+  }
+
+  if (req.method === "POST") {
+    if (await enforceRateLimit(req, res, { name: "collaborators-private-write", limit: 90, windowMs: 5 * 60 * 1000 })) return;
+    if (enforcePayloadLimit(req, res, 128 * 1024)) return;
   }
 
   const rawId = Array.isArray(req.query.id) ? req.query.id[0] : req.query.id;

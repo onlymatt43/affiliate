@@ -3227,6 +3227,8 @@ function showAIAssistantOverlay(item, mode) {
     const input = overlay.querySelector(".ai-overlay__input");
     const sendBtn = overlay.querySelector(".ai-overlay__send");
     const entityBadge = overlay.querySelector(".ai-overlay__entity-badge");
+    let lastAutoSaveFingerprint = "";
+    let autoSaveDebounceTimer = null;
     const publicPreviewEl = overlay.querySelector("[data-preview='public']");
     const privatePreviewEl = overlay.querySelector("[data-preview='private']");
 
@@ -3440,6 +3442,63 @@ function showAIAssistantOverlay(item, mode) {
       return remote ? "Affiliation ajoutee et sauvee en base." : "Affiliation ajoutee et sauvee localement.";
     }
 
+    function buildAutoSaveFingerprint(extracted) {
+      if (!extracted || typeof extracted !== "object") return "";
+      const payload = {
+        entityType: extracted.entityType || "",
+        editId: extracted.editId || "",
+        fields: extracted.fields || {}
+      };
+      try {
+        return JSON.stringify(payload);
+      } catch (_) {
+        return "";
+      }
+    }
+
+    function canAutoSaveExtracted(extracted) {
+      if (!extracted || typeof extracted !== "object") return { ok: false, reason: "invalid extraction" };
+      if (extracted.entityType !== "affiliate" && extracted.entityType !== "collaborator") {
+        return { ok: false, reason: "unknown entity type" };
+      }
+
+      const fields = extracted.fields && typeof extracted.fields === "object" ? extracted.fields : null;
+      if (!fields) return { ok: false, reason: "missing fields" };
+
+      // For edits, partial updates are acceptable.
+      if (toText(extracted.editId)) return { ok: true, reason: "" };
+
+      // For creations, require minimal identity + link.
+      const name = toText(fields.name);
+      const primaryUrl = toText(fields.primaryUrl || fields.publicLink || fields.mainLink || fields.link || fields.promoUrl || fields.contactUrl);
+      if (!name || !primaryUrl) {
+        return { ok: false, reason: "waiting for name + primaryUrl" };
+      }
+
+      return { ok: true, reason: "" };
+    }
+
+    async function safeAutoSaveExtracted(extracted) {
+      const gate = canAutoSaveExtracted(extracted);
+      if (!gate.ok) return { status: "skipped", message: gate.reason };
+
+      const fingerprint = buildAutoSaveFingerprint(extracted);
+      if (fingerprint && fingerprint === lastAutoSaveFingerprint) {
+        return { status: "skipped", message: "duplicate extraction" };
+      }
+
+      if (fingerprint) lastAutoSaveFingerprint = fingerprint;
+
+      await new Promise((resolve) => {
+        if (autoSaveDebounceTimer) clearTimeout(autoSaveDebounceTimer);
+        autoSaveDebounceTimer = setTimeout(resolve, 500);
+      });
+      autoSaveDebounceTimer = null;
+
+      const saveMsg = await persistExtractedEntity(extracted);
+      return { status: "saved", message: saveMsg };
+    }
+
     function appendMessage(role, text) {
       const bubble = document.createElement("div");
       bubble.className = "ai-overlay__msg";
@@ -3625,8 +3684,12 @@ function showAIAssistantOverlay(item, mode) {
           appendExtractedBlock(data.extracted);
           renderIntakePreview(data.extracted);
           try {
-            const saveMsg = await persistExtractedEntity(data.extracted);
-            appendMessage("assistant", `Auto-save: ${saveMsg}`);
+            const autoSaveResult = await safeAutoSaveExtracted(data.extracted);
+            if (autoSaveResult.status === "saved") {
+              appendMessage("assistant", `Auto-save: ${autoSaveResult.message}`);
+            } else {
+              appendMessage("assistant", `Auto-save skipped: ${autoSaveResult.message}`);
+            }
           } catch (saveError) {
             appendMessage("assistant", `Auto-save failed: ${String(saveError?.message || saveError)}`);
           }

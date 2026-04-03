@@ -46,6 +46,10 @@ Rate limiting distribué (optionnel):
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
 
+Fichier exemple:
+
+- `.env.example`
+
 ## Modèle de données
 
 Entités supportées:
@@ -150,6 +154,18 @@ node scripts/auto-sync-affiliates.mjs --mode=json-to-sheet --source=data/affilia
 - En prod, éviter le fallback local comme source de vérité
 - Vérifier les variables secrètes avant tout déploiement
 - Conserver les limites de payload/rate-limit sur les routes write/IA
+
+## Release Checklist
+
+Avant push prod:
+
+- Vérifier `ADMIN_PASSWORD` et `ADMIN_SESSION_TOKEN`
+- Vérifier `OPENAI_API_KEY`
+- Vérifier Turso (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`) si mode remote attendu
+- Vérifier `/api/health` après déploiement
+- Smoke test HeyHi intake: extraction, preview public/private, auto-save
+- Smoke test collaborator unlock: accès carte, update booking, add tagged URL
+- Vérifier que la vue publique n'expose pas de champs privés
 
 ## Endpoints collaborators
 
