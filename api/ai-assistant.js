@@ -356,6 +356,47 @@ module.exports = async function handler(req, res) {
 
       // Strip blocks from the visible message
       message = rawContent.replace(/\[EXTRACTED\][\s\S]*?\[\/EXTRACTED\]/g, "").replace(/\[DELETE\][\s\S]*?\[\/DELETE\]/g, "").trim();
+
+      // Collaborator token sessions can only operate on their own existing card.
+      if (!isAdmin && collaboratorId) {
+        if (extracted && typeof extracted === "object") {
+          const fields = extracted.fields && typeof extracted.fields === "object" ? extracted.fields : {};
+          const allowed = new Set([
+            "booking",
+            "bookingDate",
+            "bookingTime",
+            "bookingLocation",
+            "bookingNote",
+            "publicLinks",
+            "privateLinks",
+            "taggedUrls",
+            "contact",
+            "email",
+            "rates",
+            "sourceNotes",
+            "visibility",
+            "fr",
+            "en",
+            "tags",
+            "specs",
+            "caption"
+          ]);
+
+          const sanitizedFields = {};
+          Object.entries(fields).forEach(([key, value]) => {
+            if (allowed.has(key)) sanitizedFields[key] = value;
+          });
+
+          extracted = {
+            entityType: "collaborator",
+            editId: collaboratorId,
+            fields: sanitizedFields
+          };
+        }
+
+        // Deletion is admin-only.
+        deleteRequest = null;
+      }
     }
 
     if (mode === "post") {

@@ -697,31 +697,61 @@ function buildWorkspaceCardMarkup(item, isPublic) {
   return card.outerHTML;
 }
 
+function sanitizeCollaboratorSelfEditFields(fields) {
+  if (!fields || typeof fields !== "object") return {};
+  const allowed = new Set([
+    "booking",
+    "bookingDate",
+    "bookingTime",
+    "bookingLocation",
+    "bookingNote",
+    "publicLinks",
+    "privateLinks",
+    "taggedUrls",
+    "contact",
+    "email",
+    "rates",
+    "sourceNotes",
+    "visibility",
+    "fr",
+    "en",
+    "tags",
+    "specs",
+    "caption"
+  ]);
+  const out = {};
+  Object.entries(fields).forEach(([key, value]) => {
+    if (allowed.has(key)) out[key] = value;
+  });
+  return out;
+}
+
 function draftFromExtractedCollaborator(baseCollab, fields) {
   if (!fields || typeof fields !== "object") return baseCollab;
-  const draft = { ...baseCollab, ...fields };
+  const scopedFields = sanitizeCollaboratorSelfEditFields(fields);
+  const draft = { ...baseCollab, ...scopedFields };
 
-  const bookingObject = fields.booking && typeof fields.booking === "object"
-    ? fields.booking
+  const bookingObject = scopedFields.booking && typeof scopedFields.booking === "object"
+    ? scopedFields.booking
     : {
-        dateLabel: fields.bookingDate,
-        timeLabel: fields.bookingTime,
-        location: fields.bookingLocation,
-        note: fields.bookingNote
+        dateLabel: scopedFields.bookingDate,
+        timeLabel: scopedFields.bookingTime,
+        location: scopedFields.bookingLocation,
+        note: scopedFields.bookingNote
       };
 
   draft.booking = normalizeBooking({ ...(baseCollab.booking || {}), ...(bookingObject || {}) });
 
-  if (fields.publicLinks != null) draft.publicLinks = normalizePrivateLinks(fields.publicLinks);
-  if (fields.privateLinks != null) draft.privateLinks = normalizePrivateLinks(fields.privateLinks);
-  if (fields.taggedUrls != null) draft.taggedUrls = normalizeTaggedUrls(fields.taggedUrls);
+  if (scopedFields.publicLinks != null) draft.publicLinks = normalizePrivateLinks(scopedFields.publicLinks);
+  if (scopedFields.privateLinks != null) draft.privateLinks = normalizePrivateLinks(scopedFields.privateLinks);
+  if (scopedFields.taggedUrls != null) draft.taggedUrls = normalizeTaggedUrls(scopedFields.taggedUrls);
 
-  if (fields.tags || fields.specs || fields.caption) {
+  if (scopedFields.tags || scopedFields.specs || scopedFields.caption) {
     draft.en = {
       ...(draft.en || {}),
-      tags: fields.tags != null ? toText(fields.tags) : toText(draft.en?.tags),
-      specs: fields.specs != null ? toText(fields.specs) : toText(draft.en?.specs),
-      caption: fields.caption != null ? toText(fields.caption) : toText(draft.en?.caption)
+      tags: scopedFields.tags != null ? toText(scopedFields.tags) : toText(draft.en?.tags),
+      specs: scopedFields.specs != null ? toText(scopedFields.specs) : toText(draft.en?.specs),
+      caption: scopedFields.caption != null ? toText(scopedFields.caption) : toText(draft.en?.caption)
     };
   }
 
