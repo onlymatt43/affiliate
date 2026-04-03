@@ -4,6 +4,7 @@ const enableDebug = isLocalDebugHost && new URLSearchParams(window.location.sear
 const state = {
   activeEntity: "affiliates",
   activeCategory: "all",
+  activeTag: "all",
   activeLang: "fr",
   viewMode: "full",
   isUnlocked: false,
@@ -43,6 +44,8 @@ const refs = {
   entityButtons: Array.from(document.querySelectorAll(".entity-btn")),
   categoryAllBtn: document.getElementById("categoryFilter")?.querySelector(".cat-btn--all"),
   categoryChips: document.getElementById("categoryChips"),
+  tagAllBtn: document.getElementById("tagFilter")?.querySelector(".tag-btn--all"),
+  tagChips: document.getElementById("tagChips"),
   searchInput: document.getElementById("searchInput"),
   platformFilter: document.getElementById("platformFilter"),
   nicheFilter: document.getElementById("nicheFilter"),
@@ -94,6 +97,74 @@ function assignCardArchetypes(items) {
     const roll = Math.random() * 100;
     const archetype = types[thresholds.findIndex((t) => roll < t)];
     return { item, archetype };
+  });
+}
+
+const DYNAMIC_THEMES = [
+  {
+    body: "radial-gradient(circle at 12% 16%, #ffd8bf 0%, transparent 32%), radial-gradient(circle at 84% 18%, #ffefb0 0%, transparent 28%), linear-gradient(180deg, #fff7ef 0%, #ffe4d2 100%)",
+    orbA: "#ff7e57",
+    orbB: "#2ba191"
+  },
+  {
+    body: "radial-gradient(circle at 20% 10%, #d7f7e9 0%, transparent 34%), radial-gradient(circle at 82% 24%, #ffe2b8 0%, transparent 30%), linear-gradient(180deg, #f4fff8 0%, #e7f6ff 100%)",
+    orbA: "#27b08d",
+    orbB: "#f39c4a"
+  },
+  {
+    body: "radial-gradient(circle at 10% 18%, #ffe1ef 0%, transparent 30%), radial-gradient(circle at 90% 14%, #cde8ff 0%, transparent 30%), linear-gradient(180deg, #fff8fb 0%, #f2f2ff 100%)",
+    orbA: "#ff6aa2",
+    orbB: "#4e8cff"
+  },
+  {
+    body: "radial-gradient(circle at 14% 22%, #ffe8c7 0%, transparent 30%), radial-gradient(circle at 86% 18%, #dbf9ff 0%, transparent 34%), linear-gradient(180deg, #fffdf6 0%, #eefcff 100%)",
+    orbA: "#ff9d2d",
+    orbB: "#0aa3c6"
+  }
+];
+
+function applyDynamicTheme() {
+  const theme = randomPick(DYNAMIC_THEMES);
+  if (!theme) return;
+
+  document.body.style.background = theme.body;
+  const orbA = document.querySelector(".orb-a");
+  const orbB = document.querySelector(".orb-b");
+  if (orbA) orbA.style.background = theme.orbA;
+  if (orbB) orbB.style.background = theme.orbB;
+}
+
+function shuffleItems(items) {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+function applyCardChaosLayout() {
+  const isNarrow = window.matchMedia("(max-width: 720px)").matches;
+  const cards = getAllCards();
+  cards.forEach((card, index) => {
+    card.classList.toggle("card-chaos", !isNarrow);
+    card.classList.remove("card-chaos--wide", "card-chaos--tall");
+
+    if (isNarrow) {
+      card.style.setProperty("--chaos-delay", "0ms");
+      card.style.setProperty("--chaos-rot", "0deg");
+      return;
+    }
+
+    const roll = Math.random();
+    if (roll > 0.84) {
+      card.classList.add("card-chaos--wide");
+    } else if (roll > 0.68) {
+      card.classList.add("card-chaos--tall");
+    }
+
+    card.style.setProperty("--chaos-delay", `${Math.round(randomBetween(0, 450)) + index * 12}ms`);
+    card.style.setProperty("--chaos-rot", `${randomBetween(-1.4, 1.4).toFixed(2)}deg`);
   });
 }
 
@@ -437,6 +508,40 @@ function parseTagTokens(value) {
     .split(/[\n,]/g)
     .map((tag) => tag.trim())
     .filter(Boolean);
+}
+
+function getItemTags(item) {
+  const seen = new Set();
+  const out = [];
+
+  parseTagTokens(item.fr?.tags || "").forEach((tag) => {
+    const key = toText(tag).toLowerCase();
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    out.push(tag);
+  });
+
+  parseTagTokens(item.en?.tags || "").forEach((tag) => {
+    const key = toText(tag).toLowerCase();
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    out.push(tag);
+  });
+
+  if (Array.isArray(item.taggedUrls)) {
+    item.taggedUrls.forEach((entry) => {
+      if (!entry || !Array.isArray(entry.tags)) return;
+      entry.tags.forEach((tag) => {
+        const clean = toText(tag);
+        const key = clean.toLowerCase();
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        out.push(clean);
+      });
+    });
+  }
+
+  return out;
 }
 
 function tagBadgesMarkup(tags) {
@@ -1139,34 +1244,43 @@ function mergeAllItems() {
 }
 
 function publicCardMarkup(item, archetype = "default") {
+  const isNarrowViewport = window.matchMedia("(max-width: 720px)").matches;
   const isCollabType = item.category === "collaborator" || item.category === "event";
   const platformLabel = PLATFORM_LABELS[item.platform] || item.platform;
   const borderOpacity = randomBetween(0.14, 0.38).toFixed(2);
 
   let articleStyle, articleClasses, nameSize;
   if (isCollabType) {
-    const nameSizeBase = { default: 1.05, featured: 2.1, small: 0.88, editorial: 1.75 }[archetype] || 1.05;
-    nameSize = (nameSizeBase + randomBetween(-0.15, 0.15)).toFixed(2);
-    const aspectRatioMap = { default: [0.88, 1.12], featured: [0.60, 0.82], small: [1.28, 1.68], editorial: [0.72, 0.96] };
+    const nameSizeBase = isNarrowViewport
+      ? ({ default: 0.98, featured: 1.16, small: 0.9, editorial: 1.06 }[archetype] || 0.98)
+      : ({ default: 1.05, featured: 2.1, small: 0.88, editorial: 1.75 }[archetype] || 1.05);
+    nameSize = (nameSizeBase + randomBetween(isNarrowViewport ? -0.06 : -0.15, isNarrowViewport ? 0.06 : 0.15)).toFixed(2);
+    const aspectRatioMap = isNarrowViewport
+      ? { default: [0.92, 1.1], featured: [0.84, 1.02], small: [1.02, 1.2], editorial: [0.88, 1.06] }
+      : { default: [0.88, 1.12], featured: [0.60, 0.82], small: [1.28, 1.68], editorial: [0.72, 0.96] };
     const [arMin, arMax] = aspectRatioMap[archetype] || [0.88, 1.12];
     const aspectRatio = randomBetween(arMin, arMax).toFixed(3);
     articleStyle = `border: 1px solid rgba(200, 145, 26, ${borderOpacity}); aspect-ratio: ${aspectRatio};`;
     articleClasses = `affiliate-card collaborator-card public-card card--${archetype}`;
   } else {
-    const nameSizeBase = { default: 1.24, featured: 1.75, small: 1.0, editorial: 1.5 }[archetype] || 1.24;
-    nameSize = (nameSizeBase + randomBetween(-0.1, 0.1)).toFixed(2);
-    const minHeightMap = { default: [200, 280], featured: [320, 420], small: [160, 220], editorial: [250, 340] };
+    const nameSizeBase = isNarrowViewport
+      ? ({ default: 1.04, featured: 1.22, small: 0.94, editorial: 1.08 }[archetype] || 1.04)
+      : ({ default: 1.24, featured: 1.75, small: 1.0, editorial: 1.5 }[archetype] || 1.24);
+    nameSize = (nameSizeBase + randomBetween(isNarrowViewport ? -0.05 : -0.1, isNarrowViewport ? 0.05 : 0.1)).toFixed(2);
+    const minHeightMap = isNarrowViewport
+      ? { default: [180, 220], featured: [220, 280], small: [150, 190], editorial: [190, 250] }
+      : { default: [200, 280], featured: [320, 420], small: [160, 220], editorial: [250, 340] };
     const [mhMin, mhMax] = minHeightMap[archetype] || [200, 280];
     const minHeight = Math.round(randomBetween(mhMin, mhMax));
-    const gridRow = archetype === "featured" ? "span 2" : "span 1";
+    const gridRow = !isNarrowViewport && archetype === "featured" ? "span 2" : "span 1";
     articleStyle = `border: 1px solid rgba(200, 145, 26, ${borderOpacity}); min-height: ${minHeight}px; grid-row: ${gridRow};`;
     articleClasses = `affiliate-card public-card card--${archetype}`;
   }
 
   const fontWeight = randomPick([400, 600, 800]);
-  const letterSpacing = randomBetween(0, 0.1).toFixed(3);
+  const letterSpacing = randomBetween(0, isNarrowViewport ? 0.03 : 0.1).toFixed(3);
   const textTransform = randomPick(["none", "uppercase"]);
-  const nameRotation = archetype === "editorial" ? randomBetween(-8, 8).toFixed(1) : 0;
+  const nameRotation = !isNarrowViewport && archetype === "editorial" ? randomBetween(-8, 8).toFixed(1) : 0;
 
   const nameStyle = [
     `font-size: ${nameSize}rem`,
@@ -1179,9 +1293,7 @@ function publicCardMarkup(item, archetype = "default") {
   const editorialAccent = archetype === "editorial"
     ? `<span class="card--editorial__accent" aria-hidden="true"></span>`
     : "";
-  const flippedLabel = archetype === "editorial" && platformLabel
-    ? `<span class="card--editorial__flip-label" aria-hidden="true">${escapeHtml(platformLabel)}</span>`
-    : "";
+  const flippedLabel = "";
 
   const bookingBadgeText = isCollabType && isPublicVisible(item, "booking") ? bookingSummary(item.booking) : "";
   const bookingBadge = bookingBadgeText ? `<span class="booking-badge">${escapeHtml(bookingBadgeText)}</span>` : "";
@@ -1220,7 +1332,7 @@ function publicCardMarkup(item, archetype = "default") {
       ? `<div class="collab-panel__copy-row" data-action="copy-inline-value" data-copy-value="${escapeHtml(item.contact)}" title="Cliquer pour copier">${escapeHtml(item.contact)}</div>`
       : "";
     const shareBtn = bookingBadgeText && isPublicVisible(item, "booking")
-      ? `<button type="button" class="collab-panel__share-btn" data-action="share-collab" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}">Partager RV</button>`
+      ? `<button type="button" class="collab-panel__share-btn" data-action="share-collab" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}">SPREAD IT</button>`
       : "";
     panelContent = `
       <div class="collab-panel__name">${escapeHtml(item.name)}</div>
@@ -1251,6 +1363,7 @@ function publicCardMarkup(item, archetype = "default") {
       style="${articleStyle}"
       data-id="${escapeHtml(item.id)}"
       data-category="${escapeHtml(item.category || (isCollabType ? "collaborator" : "affiliate"))}"
+      data-tags="${escapeHtml(getItemTags(item).map((tag) => toText(tag).toLowerCase()).join("|"))}"
       ${isCollabType ? `data-collab-id="${escapeHtml(item.id)}" data-primary-url="${escapeHtml(item.primaryUrl)}"` : `data-primary-url="${escapeHtml(item.primaryUrl)}" data-promo-code="${escapeHtml(item.promoCode)}" data-social-url="${escapeHtml(item.socialUrl || "")}" data-fallback-url="${escapeHtml(item.socialUrl || "")}"`}
       data-booking-ts="${bookingTs || ""}"
       tabindex="0">
@@ -1384,6 +1497,7 @@ function privateCardMarkup(item) {
       class="affiliate-card${isCollabType ? " collaborator-card" : ""}"
       data-id="${escapeHtml(item.id)}"
       data-category="${escapeHtml(item.category || (isCollabType ? "collaborator" : "affiliate"))}"
+      data-tags="${escapeHtml(getItemTags(item).map((tag) => toText(tag).toLowerCase()).join("|"))}"
       data-platform="${escapeHtml(item.platform)}"
       data-niche="${escapeHtml(item.niche)}"
       data-format="${escapeHtml(item.format)}"
@@ -1546,7 +1660,7 @@ async function hydrateAllPreviews() {
 }
 
 function renderCards() {
-  const activeItems = getActiveItems();
+  const activeItems = shuffleItems(getActiveItems());
   state.debug.renderedCount = activeItems.length;
 
   const isPublicMode = !state.isUnlocked;
@@ -1564,6 +1678,7 @@ function renderCards() {
   }
 
   refs.cardsGrid.innerHTML = activeItems.map((item) => cardMarkup(item, archetypeMap)).join("");
+  applyCardChaosLayout();
   hydrateAllPreviews();
   updateDebugInfo();
 }
@@ -2253,6 +2368,7 @@ function rerenderAll() {
   applyViewMode();
   applyFilters();
   refreshCategoryChips();
+  refreshTagChips();
 }
 
 function getAllCards() {
@@ -2506,6 +2622,50 @@ function applyCategoryFilter() {
   applyFilters();
 }
 
+function refreshTagChips() {
+  if (!refs.tagChips) return;
+
+  const tagsMap = new Map();
+  state.allItems.forEach((item) => {
+    getItemTags(item).forEach((tag) => {
+      const key = toText(tag).toLowerCase();
+      if (!key || tagsMap.has(key)) return;
+      tagsMap.set(key, tag);
+    });
+  });
+
+  const tags = [...tagsMap.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([, label]) => label);
+
+  refs.tagChips.innerHTML = tags
+    .map((tag) => {
+      const key = toText(tag).toLowerCase();
+      const isActive = state.activeTag === key;
+      return `<button type="button" class="cat-btn tag-btn${isActive ? " is-active" : ""}" data-tag="${escapeHtml(key)}">${escapeHtml(tag)}</button>`;
+    })
+    .join("");
+
+  refs.tagChips.querySelectorAll(".tag-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.activeTag = btn.dataset.tag || "all";
+      applyTagFilter();
+    });
+  });
+}
+
+function applyTagFilter() {
+  if (refs.tagAllBtn) {
+    refs.tagAllBtn.classList.toggle("is-active", state.activeTag === "all");
+  }
+  if (refs.tagChips) {
+    refs.tagChips.querySelectorAll(".tag-btn").forEach((btn) => {
+      btn.classList.toggle("is-active", btn.dataset.tag === state.activeTag);
+    });
+  }
+  applyFilters();
+}
+
 function cardMatches(card, searchTerm, platform, niche, format, tone, options = {}) {
   const { upcomingOnly = false, nowTimestamp = Date.now() } = options;
 
@@ -2541,6 +2701,16 @@ function applyFilters() {
     if (state.activeCategory !== "all" && card.dataset.category !== state.activeCategory) {
       card.style.display = "none";
       return;
+    }
+    if (state.activeTag !== "all") {
+      const cardTags = String(card.dataset.tags || "")
+        .split("|")
+        .map((tag) => tag.trim().toLowerCase())
+        .filter(Boolean);
+      if (!cardTags.includes(state.activeTag)) {
+        card.style.display = "none";
+        return;
+      }
     }
     const isVisible = cardMatches(card, searchTerm, platform, niche, format, tone, {
       upcomingOnly,
@@ -3172,6 +3342,13 @@ function bindEntityToggle() {
       applyCategoryFilter();
     });
   }
+
+  if (refs.tagAllBtn) {
+    refs.tagAllBtn.addEventListener("click", () => {
+      state.activeTag = "all";
+      applyTagFilter();
+    });
+  }
 }
 
 function bindCategoryFormSelect() {
@@ -3344,6 +3521,8 @@ function bindComposerActions() {
 
 async function init() {
   try {
+    applyDynamicTheme();
+    applyAccessMode();
     await loadAffiliates();
     await loadCollaborators();
     if (state.persistenceByEntity.affiliates.mode === "local") {
@@ -3361,6 +3540,7 @@ async function init() {
     mergeCollaborators();
     mergeAllItems();
     refreshCategoryChips();
+    refreshTagChips();
     applyCategoryToForm("affiliate");
     renderCards();
     applyLanguage();

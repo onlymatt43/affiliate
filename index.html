@@ -16,7 +16,7 @@
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
+  <body class="is-locked">
     <div class="bg-orb orb-a" aria-hidden="true"></div>
     <div class="bg-orb orb-b" aria-hidden="true"></div>
 
@@ -32,6 +32,11 @@
           <div class="category-filter" id="categoryFilter" aria-label="Filtre par categorie">
             <button type="button" class="cat-btn cat-btn--all is-active" data-category="all">Tout</button>
             <span class="cat-chips" id="categoryChips"></span>
+          </div>
+
+          <div class="tag-filter" id="tagFilter" aria-label="Filtre par tag">
+            <button type="button" class="cat-btn tag-btn tag-btn--all is-active" data-tag="all">Tous les tags</button>
+            <span class="cat-chips tag-chips" id="tagChips"></span>
           </div>
 
           <div class="control-group private-control">
