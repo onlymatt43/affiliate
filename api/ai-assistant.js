@@ -114,9 +114,43 @@ ${contextBlock}
 Format: ${item.format || "post"}. Maximum 300 mots.`;
 }
 
-function buildIntakeSystemPrompt(entities) {
+function buildIntakeSystemPrompt(entities, activeItem = null, options = {}) {
+  const collaboratorSelfEdit = Boolean(options.collaboratorSelfEdit);
   const affiliateNames = (entities?.affiliates || []).map((a) => `  - "${a.name}" (id: ${a.id})`).join("\n") || "  (aucun)";
   const collaboratorNames = (entities?.collaborators || []).map((c) => `  - "${c.name}" (id: ${c.id})`).join("\n") || "  (aucun)";
+  const activeContext = activeItem && typeof activeItem === "object"
+    ? `
+
+CARTE ACTIVE (priorité):
+Tu modifies cette carte en priorité sauf demande explicite contraire.
+
+${JSON.stringify({
+  id: activeItem.id || null,
+  category: activeItem.category || null,
+  name: activeItem.name || null,
+  primaryUrl: activeItem.primaryUrl || null,
+  contact: activeItem.contact || null,
+  email: activeItem.email || null,
+  booking: activeItem.booking || null,
+  publicLinks: activeItem.publicLinks || [],
+  privateLinks: activeItem.privateLinks || [],
+  taggedUrls: activeItem.taggedUrls || [],
+  visibility: activeItem.visibility || null,
+  en: activeItem.en || null,
+  fr: activeItem.fr || null
+}, null, 2)}`
+    : "";
+
+  const collaboratorSelfEditPolicy = collaboratorSelfEdit
+    ? `
+
+MODE COLLABORATEUR (SESSION LIMITÉE):
+- L'utilisateur édite sa propre carte active.
+- Ne demande PAS de lien de connexion/login.
+- Ne propose PAS de changer l'identité de la carte (name, primaryUrl, handle owner) sauf demande explicite très claire.
+- Priorité aux changements opérationnels: booking, taggedUrls, publicLinks/privateLinks, notes, visibilité.
+- Si une info concerne un autre collaborateur, demande une confirmation explicite avant de l'utiliser.`
+    : "";
 
   return `Tu es HeyHi, un assistant de saisie pour gérer des fiches d'affiliés et de collaborateurs/collaboratrices.
 
@@ -139,6 +173,8 @@ SCHÉMAS:
 ${AFFILIATE_SCHEMA}
 
 ${COLLABORATOR_SCHEMA}
+${activeContext}
+${collaboratorSelfEditPolicy}
 
 RÈGLES:
 1. Pose des questions progressivement — pas tout en même temps. Commence par identifier le type (affilié ou collaborateur) et le nom.
@@ -241,7 +277,9 @@ module.exports = async function handler(req, res) {
   // Build system prompt based on mode
   const systemPrompt = mode === "post"
     ? buildPostSystemPrompt(item, lang)
-    : buildIntakeSystemPrompt(entities);
+    : buildIntakeSystemPrompt(entities, item, {
+      collaboratorSelfEdit: !isAdmin && Boolean(collaboratorId)
+    });
 
   // Build messages array
   const messages = [{ role: "system", content: systemPrompt }];

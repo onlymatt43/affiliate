@@ -820,7 +820,7 @@ function upsertCollaboratorWorkspace(collabId, collab) {
         body: JSON.stringify({
           mode: "intake",
           lang: "en",
-          item: { id: collabId, name: draft.name },
+          item: draft,
           entities: { affiliates: [], collaborators: [{ id: collabId, name: draft.name }] },
           messages: history
         })
@@ -1612,6 +1612,17 @@ function privateCardMarkup(item) {
   const isCollabType = item.category === "collaborator" || item.category === "event";
   const platformLabel = PLATFORM_LABELS[item.platform] || item.platform;
   const nicheLabel = NICHE_LABELS[item.niche] || item.niche;
+  const hasValidPrimaryUrl = isValidHttpUrl(item.primaryUrl);
+  const primaryUrlLabel = hasValidPrimaryUrl
+    ? (() => {
+        try {
+          const u = new URL(item.primaryUrl);
+          return `${u.hostname.replace(/^www\./, "")}${u.pathname.replace(/\/$/, "")}` || item.primaryUrl;
+        } catch (_) {
+          return item.primaryUrl;
+        }
+      })()
+    : "-";
 
   const socialLink = !isCollabType && item.socialUrl
     ? `<a href="${escapeHtml(item.socialUrl)}" target="_blank" rel="noopener noreferrer" class="contact-link">Profil social</a>`
@@ -1632,7 +1643,9 @@ function privateCardMarkup(item) {
         <h3>Kit collaboration</h3>
         <div class="kit-row">
           <span class="kit-label">Lien principal</span>
-          <a href="${escapeHtml(item.primaryUrl)}" target="_blank" rel="noopener noreferrer" class="kit-link">Ouvrir</a>
+          ${hasValidPrimaryUrl
+      ? `<a href="${escapeHtml(item.primaryUrl)}" target="_blank" rel="noopener noreferrer" class="kit-link">${escapeHtml(primaryUrlLabel)}</a>`
+      : `<span class="kit-value">-</span>`}
         </div>
         <div class="kit-row">
           <span class="kit-label">Contact</span>
