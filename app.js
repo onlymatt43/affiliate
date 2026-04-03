@@ -3,8 +3,7 @@ const enableDebug = isLocalDebugHost && new URLSearchParams(window.location.sear
 
 const state = {
   activeEntity: "affiliates",
-  activeCategory: "all",
-  activeTag: "all",
+  activeTags: [],
   activeLang: "fr",
   viewMode: "full",
   isUnlocked: false,
@@ -42,8 +41,6 @@ const metaCache = new Map();
 const refs = {
   cardsGrid: document.getElementById("cardsGrid"),
   entityButtons: Array.from(document.querySelectorAll(".entity-btn")),
-  categoryAllBtn: document.getElementById("categoryFilter")?.querySelector(".cat-btn--all"),
-  categoryChips: document.getElementById("categoryChips"),
   tagAllBtn: document.getElementById("tagFilter")?.querySelector(".tag-btn--all"),
   tagChips: document.getElementById("tagChips"),
   searchInput: document.getElementById("searchInput"),
@@ -513,6 +510,13 @@ function parseTagTokens(value) {
 function getItemTags(item) {
   const seen = new Set();
   const out = [];
+
+  const categoryTag = toText(item.category);
+  if (categoryTag) {
+    const key = categoryTag.toLowerCase();
+    seen.add(key);
+    out.push(categoryTag);
+  }
 
   parseTagTokens(item.fr?.tags || "").forEach((tag) => {
     const key = toText(tag).toLowerCase();
@@ -2629,7 +2633,6 @@ function rerenderAll() {
   applyLanguage();
   applyViewMode();
   applyFilters();
-  refreshCategoryChips();
   refreshTagChips();
 }
 
@@ -2855,38 +2858,6 @@ function applyCategoryToForm(categoryValue) {
   }
 }
 
-function refreshCategoryChips() {
-  if (!refs.categoryChips) return;
-
-  const categories = [...new Set(state.allItems.map((item) => item.category).filter(Boolean))];
-
-  refs.categoryChips.innerHTML = categories
-    .map((cat) => {
-      const isActive = state.activeCategory === cat;
-      return `<button type="button" class="cat-btn${isActive ? " is-active" : ""}" data-category="${escapeHtml(cat)}">${escapeHtml(cat)}</button>`;
-    })
-    .join("");
-
-  refs.categoryChips.querySelectorAll(".cat-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      state.activeCategory = btn.dataset.category;
-      applyCategoryFilter();
-    });
-  });
-}
-
-function applyCategoryFilter() {
-  if (refs.categoryAllBtn) {
-    refs.categoryAllBtn.classList.toggle("is-active", state.activeCategory === "all");
-  }
-  if (refs.categoryChips) {
-    refs.categoryChips.querySelectorAll(".cat-btn").forEach((btn) => {
-      btn.classList.toggle("is-active", btn.dataset.category === state.activeCategory);
-    });
-  }
-  applyFilters();
-}
-
 function refreshTagChips() {
   if (!refs.tagChips) return;
 
@@ -2906,14 +2877,20 @@ function refreshTagChips() {
   refs.tagChips.innerHTML = tags
     .map((tag) => {
       const key = toText(tag).toLowerCase();
-      const isActive = state.activeTag === key;
+      const isActive = state.activeTags.includes(key);
       return `<button type="button" class="cat-btn tag-btn${isActive ? " is-active" : ""}" data-tag="${escapeHtml(key)}">${escapeHtml(tag)}</button>`;
     })
     .join("");
 
   refs.tagChips.querySelectorAll(".tag-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      state.activeTag = btn.dataset.tag || "all";
+      const key = btn.dataset.tag || "";
+      if (!key) return;
+      if (state.activeTags.includes(key)) {
+        state.activeTags = state.activeTags.filter((tag) => tag !== key);
+      } else {
+        state.activeTags = [...state.activeTags, key];
+      }
       applyTagFilter();
     });
   });
@@ -2921,11 +2898,11 @@ function refreshTagChips() {
 
 function applyTagFilter() {
   if (refs.tagAllBtn) {
-    refs.tagAllBtn.classList.toggle("is-active", state.activeTag === "all");
+    refs.tagAllBtn.classList.toggle("is-active", state.activeTags.length === 0);
   }
   if (refs.tagChips) {
     refs.tagChips.querySelectorAll(".tag-btn").forEach((btn) => {
-      btn.classList.toggle("is-active", btn.dataset.tag === state.activeTag);
+      btn.classList.toggle("is-active", state.activeTags.includes(btn.dataset.tag || ""));
     });
   }
   applyFilters();
@@ -2962,17 +2939,13 @@ function applyFilters() {
   let visibleCount = 0;
 
   getAllCards().forEach((card) => {
-    // Category filter first
-    if (state.activeCategory !== "all" && card.dataset.category !== state.activeCategory) {
-      card.style.display = "none";
-      return;
-    }
-    if (state.activeTag !== "all") {
+    if (state.activeTags.length > 0) {
       const cardTags = String(card.dataset.tags || "")
         .split("|")
         .map((tag) => tag.trim().toLowerCase())
         .filter(Boolean);
-      if (!cardTags.includes(state.activeTag)) {
+      const hasAllSelectedTags = state.activeTags.every((selected) => cardTags.includes(selected));
+      if (!hasAllSelectedTags) {
         card.style.display = "none";
         return;
       }
@@ -3278,7 +3251,7 @@ function showAIAssistantOverlay(item, mode) {
           }
           mergeAllItems();
           renderCards();
-          refreshCategoryChips();
+          refreshTagChips();
           block.innerHTML = `<div class="ai-overlay__extracted-header">✓ ${escapeHtml(deleteReq.name || deleteReq.id)} supprimé</div>`;
         } catch (err) {
           block.innerHTML = `<div class="ai-overlay__extracted-header">Erreur : ${escapeHtml(err.message)}</div>`;
@@ -3615,17 +3588,9 @@ function bindEntityToggle() {
     });
   });
 
-  // New: "Tout" button for category filter
-  if (refs.categoryAllBtn) {
-    refs.categoryAllBtn.addEventListener("click", () => {
-      state.activeCategory = "all";
-      applyCategoryFilter();
-    });
-  }
-
   if (refs.tagAllBtn) {
     refs.tagAllBtn.addEventListener("click", () => {
-      state.activeTag = "all";
+      state.activeTags = [];
       applyTagFilter();
     });
   }
@@ -3819,7 +3784,6 @@ async function init() {
     mergeAffiliates();
     mergeCollaborators();
     mergeAllItems();
-    refreshCategoryChips();
     refreshTagChips();
     applyCategoryToForm("affiliate");
     renderCards();
